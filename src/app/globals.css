@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #ff007f;
+  --color-brand-hover: #ff3399;
+  --color-brand-light: rgba(255, 0, 127, 0.1);
+  --color-background: #0f1115;
+  --color-surface: #1a1d24;
+  --color-surface-hover: #232730;
+  --color-border: #2a2f3a;
+  --color-text: #ffffff;
+  --color-text-muted: #94a3b8;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    antialiased: true;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Custom Scrollbar for a premium feel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-hover);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-brand);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-md border border-border rounded-2xl shadow-xl;
+  }
+  .btn-primary {
+    @apply bg-brand hover:bg-brand-hover text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_25px_rgba(255,0,127,0.5)];
+  }
+  .btn-secondary {
+    @apply bg-surface hover:bg-surface-hover text-text font-medium py-2 px-4 rounded-xl transition-all duration-200 border border-border hover:border-text-muted;
+  }
+  .input-field {
+    @apply bg-background border border-border rounded-xl px-4 py-2 text-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all w-full;
+  }
+}
