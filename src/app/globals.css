@@ -1,15 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #ff007f;
-  --color-brand-hover: #ff3399;
-  --color-brand-light: rgba(255, 0, 127, 0.1);
-  --color-background: #0f1115;
-  --color-surface: #1a1d24;
-  --color-surface-hover: #232730;
-  --color-border: #2a2f3a;
-  --color-text: #ffffff;
-  --color-text-muted: #94a3b8;
+  --color-brand: #00ff88;
+  --color-brand-hover: #00cc6a;
+  --color-brand-dim: rgba(0, 255, 136, 0.08);
+  --color-brand-glow: rgba(0, 255, 136, 0.15);
+  --color-background: #050505;
+  --color-surface: #0a0a0a;
+  --color-surface-hover: #111111;
+  --color-surface-glass: rgba(10, 10, 10, 0.7);
+  --color-border: #1a1a1a;
+  --color-border-hover: #2a2a2a;
+  --color-text: #e8e8e8;
+  --color-text-muted: #666666;
+  --color-text-dim: #444444;
+  --color-danger: #ff3333;
+  --color-warning: #ffaa00;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -17,44 +23,150 @@
   :root {
     color-scheme: dark;
   }
+
   body {
     background-color: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-sans);
-    antialiased: true;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom Scrollbar for a premium feel */
+  /* Film grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* Ultra-minimal scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 4px;
+    height: 4px;
   }
+
   ::-webkit-scrollbar-track {
-    background: var(--color-background);
+    background: transparent;
   }
+
   ::-webkit-scrollbar-thumb {
-    background: var(--color-surface-hover);
-    border-radius: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background: var(--color-brand);
+  }
+
+  /* Selection */
+  ::selection {
+    background: var(--color-brand);
+    color: #000;
   }
 }
 
 @layer components {
+
+  /* Darknode-inspired glass card */
   .glass-panel {
-    @apply bg-surface/80 backdrop-blur-md border border-border rounded-2xl shadow-xl;
+    @apply bg-surface/70 backdrop-blur-xl border border-border rounded-lg;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   }
+
+  .glass-panel:hover {
+    border-color: var(--color-border-hover);
+  }
+
+  /* Primary CTA — sharp, glowing green */
   .btn-primary {
-    @apply bg-brand hover:bg-brand-hover text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_25px_rgba(255,0,127,0.5)];
+    @apply bg-brand text-black font-bold py-2.5 px-6 rounded-md transition-all duration-300 uppercase tracking-wider text-sm;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2), 0 0 40px rgba(0, 255, 136, 0.05);
   }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.35), 0 0 60px rgba(0, 255, 136, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* Ghost/secondary button */
   .btn-secondary {
-    @apply bg-surface hover:bg-surface-hover text-text font-medium py-2 px-4 rounded-xl transition-all duration-200 border border-border hover:border-text-muted;
+    @apply bg-transparent text-text font-medium py-2.5 px-6 rounded-md transition-all duration-200 border border-border uppercase tracking-wider text-sm;
   }
+
+  .btn-secondary:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+
+  /* Input fields — stark minimal */
   .input-field {
-    @apply bg-background border border-border rounded-xl px-4 py-2 text-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all w-full;
+    @apply bg-surface border border-border rounded-md px-4 py-2.5 text-text text-sm focus:outline-none focus:border-brand transition-all w-full;
+  }
+
+  /* Section headers — uppercase military style */
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-[0.2em] text-text-muted;
+  }
+
+  /* Tactical badge */
+  .badge {
+    @apply text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm;
+  }
+
+  /* Horizontal divider with brand accent */
+  .divider {
+    @apply border-t border-border relative;
+  }
+
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    width: 40px;
+    height: 1px;
+    background: var(--color-brand);
+  }
+}
+
+/* Keyframes for ambient animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
   }
 }
