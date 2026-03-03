@@ -1,249 +1,230 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { UploadCloud, Download, FileText, FolderOpen, CheckCircle } from 'lucide-react';
+import { UploadCloud, Download, Trash2, Search, CheckSquare, Square } from 'lucide-react';
+import { psCountryDict, psSortedCodes } from '@/lib/countryDict';
 import * as XLSX from 'xlsx';
-import JSZip from 'jszip';
 
-interface SplitResult {
-    country: string;
-    countryCode: string;
-    numbers: string[];
-    count: number;
-}
-
-const countryData: Record<string, { code: string; name: string }> = {
-    '880': { code: 'BD', name: 'Bangladesh' },
-    '1': { code: 'US', name: 'USA' },
-    '44': { code: 'UK', name: 'UK' },
-    '49': { code: 'DE', name: 'Germany' },
-    '33': { code: 'FR', name: 'France' },
-    '39': { code: 'IT', name: 'Italy' },
-    '34': { code: 'ES', name: 'Spain' },
-    '91': { code: 'IN', name: 'India' },
-    '92': { code: 'PK', name: 'Pakistan' },
-    '20': { code: 'EG', name: 'Egypt' },
-    '234': { code: 'NG', name: 'Nigeria' },
-    '254': { code: 'KE', name: 'Kenya' },
-    '27': { code: 'ZA', name: 'South Africa' },
-    '212': { code: 'MA', name: 'Morocco' },
-    '216': { code: 'TN', name: 'Tunisia' },
-    '971': { code: 'AE', name: 'UAE' },
-    '966': { code: 'SA', name: 'Saudi Arabia' },
-    '968': { code: 'OM', name: 'Oman' },
-    '973': { code: 'BH', name: 'Bahrain' },
-    '965': { code: 'KW', name: 'Kuwait' },
-    '974': { code: 'QA', name: 'Qatar' },
-};
-
-function detectCountryCode(phone: string): string {
-    const clean = phone.replace(/\D/g, '');
-    
-    const prefixes = ['880', '234', '254', '212', '216', '971', '966', '968', '973', '965', '974', '92', '91', '44', '49', '33', '39', '34', '20', '27'];
-    
-    for (const prefix of prefixes) {
-        if (clean.startsWith(prefix)) {
-            return prefix;
-        }
-    }
-    
-    if (clean.startsWith('1') && clean.length >= 11) return '1';
-    
-    return 'unknown';
-}
-
-function findPhoneColumn(headers: string[]): number {
-    const phoneKeywords = ['phone', 'number', 'tel', 'mobile', 'cell', 'contact'];
-    
-    for (let i = 0; i < headers.length; i++) {
-        const header = headers[i].toLowerCase().replace(/[^a-z]/g, '');
-        if (phoneKeywords.some(kw => header.includes(kw))) {
-            return i;
-        }
-    }
-    return 0;
-}
+interface PsGroupedData { [country: string]: { code: string; count: number; nums: string[] } }
 
 export default function PhoneSplitter() {
+    const [inputVal, setInputVal] = useState('');
+    const [groupedData, setGroupedData] = useState<PsGroupedData>({});
+    const [showDashboard, setShowDashboard] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [totalProcessed, setTotalProcessed] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
-    const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
-    const [totalNumbers, setTotalNumbers] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const processFile = async (file: File) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        let phoneNumbers: string[] = [];
-        
-        if (extension === 'xlsx' || extension === 'xls') {
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
-            
-            if (jsonData.length > 0) {
-                const headers = jsonData[0].map(String);
-                const phoneColIndex = findPhoneColumn(headers);
-                
-                for (let i = 1; i < jsonData.length; i++) {
-                    const row = jsonData[i];
-                    if (row[phoneColIndex]) {
-                        const cleaned = String(row[phoneColIndex]).replace(/\D/g, '');
-                        if (cleaned.length >= 8) {
-                            phoneNumbers.push(cleaned);
+    function handleFile(f: File) {
+        if (!f) return;
+        const ext = f.name.split('.').pop()?.toLowerCase();
+        const r = new FileReader();
+
+        if (ext === 'xlsx' || ext === 'xls') {
+            r.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    const allNumbers: string[] = [];
+
+                    wb.SheetNames.forEach(name => {
+                        const sheet = wb.Sheets[name];
+                        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        if (rows.length < 2) return;
+                        const headerRow = rows[0];
+                        let numColIdx = -1;
+
+                        // Try to find "number" column
+                        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                            const row = rows[i];
+                            if (!row) continue;
+                            const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
+                            if (idx !== -1) {
+                                numColIdx = idx;
+                                for (let j = i + 1; j < rows.length; j++) {
+                                    const r2 = rows[j];
+                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
+                                }
+                                break;
+                            }
                         }
-                    }
-                }
-            }
+
+                        // Fallback: auto-detect column with phone-like numbers
+                        if (numColIdx === -1 && headerRow) {
+                            const colScores: Record<number, number> = {};
+                            for (let c = 0; c < headerRow.length; c++) colScores[c] = 0;
+                            for (let rowIdx = 1; rowIdx < Math.min(rows.length, 50); rowIdx++) {
+                                const row = rows[rowIdx];
+                                if (!row) continue;
+                                for (let c = 0; c < headerRow.length; c++) {
+                                    const val = row[c];
+                                    if (val) {
+                                        const strVal = String(val).replace(/\D/g, '');
+                                        if (strVal.length >= 6 && strVal.length <= 15) colScores[c]++;
+                                    }
+                                }
+                            }
+                            let maxScore = 0;
+                            for (const c in colScores) {
+                                if (colScores[c] > maxScore) { maxScore = colScores[c]; numColIdx = parseInt(c); }
+                            }
+                            if (numColIdx !== -1 && maxScore > 0) {
+                                for (let j = 1; j < rows.length; j++) {
+                                    const r2 = rows[j];
+                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
+                                }
+                            }
+                        }
+                    });
+
+                    if (allNumbers.length === 0) alert('No phone numbers found in file');
+                    else setInputVal(allNumbers.join('\n'));
+                } catch { alert('Error reading Excel file'); }
+            };
+            r.readAsArrayBuffer(f);
         } else {
-            const text = await file.text();
-            const lines = text.split('\n').filter(l => l.trim());
-            
-            for (const line of lines) {
-                const cleaned = line.trim().replace(/\D/g, '');
-                if (cleaned.length >= 8) {
-                    phoneNumbers.push(cleaned);
-                }
-            }
+            r.onload = (e) => { setInputVal(e.target?.result as string); };
+            r.readAsText(f);
         }
-        
-        const uniqueNumbers = [...new Set(phoneNumbers)];
-        setTotalNumbers(uniqueNumbers.length);
-        
-        const countryMap = new Map<string, string[]>();
-        
-        for (const num of uniqueNumbers) {
-            const code = detectCountryCode(num);
-            if (!countryMap.has(code)) {
-                countryMap.set(code, []);
+    }
+
+    function processNumbers() {
+        if (!inputVal.trim()) return;
+        const grouped: PsGroupedData = {};
+        let count = 0;
+
+        inputVal.split(/\r?\n/).filter(l => l.trim() !== '').forEach(l => {
+            const n = l.replace(/\D/g, '');
+            if (n.length < 3) return;
+            let code = '', country = 'UNKNOWN';
+            for (const c of psSortedCodes) {
+                if (n.startsWith(c)) { code = c; country = psCountryDict[c]; break; }
             }
-            countryMap.get(code)!.push(num);
-        }
-        
-        const results: SplitResult[] = [];
-        
-        countryMap.forEach((numbers, code) => {
-            const countryInfo = countryData[code] || { code: 'XX', name: 'Unknown' };
-            results.push({
-                country: countryInfo.name,
-                countryCode: code,
-                numbers,
-                count: numbers.length
-            });
+            if (!grouped[country]) grouped[country] = { code, count: 0, nums: [] };
+            grouped[country].count++;
+            grouped[country].nums.push(n);
+            count++;
         });
-        
-        results.sort((a, b) => b.count - a.count);
-        setSplitResults(results);
-    };
 
-    const handleFileUpload = (file: File) => {
-        processFile(file);
-    };
+        if (!count) { alert('No valid numbers found'); return; }
+        setGroupedData(grouped);
+        setTotalProcessed(count);
+        setShowDashboard(true);
+    }
 
-    const downloadFile = (result: SplitResult) => {
-        const content = result.numbers.join('\n');
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${result.countryCode}_${result.country.replace(/\s/g, '_')}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    function downloadFiles(countries: string[]) {
+        const now = new Date();
+        const ts = now.getDate() + '-' + now.toLocaleString('default', { month: 'short' }) + '_' + now.toTimeString().slice(0, 5).replace(':', '');
 
-    const downloadAllAsZip = async () => {
-        const zip = new JSZip();
-        
-        for (const result of splitResults) {
-            const content = result.numbers.join('\n');
-            zip.file(`${result.countryCode}_${result.country.replace(/\s/g, '_')}.txt`, content);
-        }
-        
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'split_by_country.zip';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+        countries.forEach((c, i) => {
+            const g = groupedData[c];
+            if (!g || !g.nums.length) return;
+            setTimeout(() => {
+                const fn = `${c.replace(/[^a-zA-Z0-9]/g, '_')}_${g.nums.length}_${ts}`;
+                const content = g.nums.join('\n');
+                const blob = new Blob([content], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fn + '.txt';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }, i * 200);
+        });
+    }
 
-    const resetTool = () => {
-        setSplitResults([]);
-        setTotalNumbers(0);
-    };
+    function downloadSelected() {
+        const cbs = document.querySelectorAll('input.ps-cb:checked') as NodeListOf<HTMLInputElement>;
+        const countries = Array.from(cbs).map(cb => cb.getAttribute('data-ps-c') || '');
+        if (!countries.length) return;
+        downloadFiles(countries);
+    }
+
+    function downloadAll() {
+        downloadFiles(Object.keys(groupedData));
+    }
+
+    function resetTool() {
+        setInputVal(''); setGroupedData({}); setShowDashboard(false); setSearchQuery(''); setTotalProcessed(0);
+    }
+
+    const filteredCountries = Object.keys(groupedData).sort().filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <div className="space-y-8">
-            {!splitResults.length ? (
+        <div className="space-y-6">
+            <div className="space-y-4">
                 <div
-                    className={`glass-panel p-10 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted hover:bg-surface-hover'}`}
+                    className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.length > 0) handleFileUpload(e.dataTransfer.files[0]);
-                    }}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <FolderOpen size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-xl font-medium">Drop File to Split by Country</p>
-                    <p className="text-sm text-text-muted mt-2">Detects country codes and splits into separate files</p>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.length && handleFileUpload(e.target.files[0])}
-                        accept=".xlsx,.xls,.txt,.csv"
-                    />
+                    <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
+                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop File</p>
+                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls</p>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv,.xlsx,.xls" />
                 </div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <div className="glass-panel px-6 py-3">
-                            <p className="text-text-muted text-xs uppercase tracking-wider">Total Numbers</p>
-                            <p className="font-bold text-2xl">{totalNumbers}</p>
+
+                <textarea value={inputVal} onChange={e => setInputVal(e.target.value)} className="input-field h-32 font-mono text-xs resize-none" placeholder={"Paste phone numbers (one per line)\n6288801256516\n2609555123456\n249123456789"} />
+
+                <div className="flex gap-2 justify-end">
+                    <button onClick={resetTool} className="btn-secondary flex items-center gap-2 text-xs"><Trash2 size={12} /> Reset</button>
+                    <button onClick={processNumbers} className="btn-primary text-xs">Process & Split →</button>
+                </div>
+            </div>
+
+            {showDashboard && (
+                <div className="space-y-4">
+                    <div className="glass-panel p-3 flex items-center gap-3 flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
+                            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="input-field pl-8 text-xs" placeholder="Search countries..." />
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={downloadAllAsZip} className="btn-primary flex items-center gap-2">
-                                <Download size={16} /> Download All (ZIP)
-                            </button>
-                            <button onClick={resetTool} className="btn-secondary">
-                                Reset
-                            </button>
+                        <button onClick={() => document.querySelectorAll('input.ps-cb').forEach((cb: any) => cb.checked = true)} className="btn-secondary text-xs py-1.5"><CheckSquare size={12} /> All</button>
+                        <button onClick={() => document.querySelectorAll('input.ps-cb').forEach((cb: any) => cb.checked = false)} className="btn-secondary text-xs py-1.5"><Square size={12} /> None</button>
+                    </div>
+
+                    <div className="glass-panel overflow-hidden">
+                        <div className="overflow-x-auto max-h-[400px]">
+                            <table className="w-full text-xs">
+                                <thead className="bg-surface-hover sticky top-0">
+                                    <tr>
+                                        <th className="p-3 w-10"><input type="checkbox" defaultChecked onChange={(e) => document.querySelectorAll('input.ps-cb').forEach((cb: any) => cb.checked = e.target.checked)} /></th>
+                                        <th className="text-left p-3 section-title">Country</th>
+                                        <th className="text-left p-3 section-title">Code</th>
+                                        <th className="text-left p-3 section-title">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredCountries.map(c => (
+                                        <tr key={c} className="border-t border-border hover:bg-surface-hover">
+                                            <td className="p-3"><input type="checkbox" className="ps-cb" data-ps-c={c} defaultChecked /></td>
+                                            <td className="p-3 font-medium">{c}</td>
+                                            <td className="p-3 text-text-muted">{groupedData[c].code}</td>
+                                            <td className="p-3"><span className="badge bg-surface-hover text-brand">{groupedData[c].count}</span></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {splitResults.map((result, i) => (
-                            <div key={i} className="glass-panel p-5 hover:border-brand/50 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                        <h3 className="font-bold text-lg">{result.country}</h3>
-                                        <p className="text-text-muted text-sm">Code: +{result.countryCode}</p>
-                                    </div>
-                                    <div className="bg-brand/10 px-3 py-1 rounded-full">
-                                        <span className="text-brand font-bold">{result.count}</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-1 mb-4">
-                                    {result.numbers.slice(0, 3).map((num, j) => (
-                                        <span key={j} className="text-xs text-text-muted font-mono bg-surface-hover px-2 py-1 rounded">
-                                            {num.substring(0, 12)}...
-                                        </span>
-                                    ))}
-                                    {result.numbers.length > 3 && (
-                                        <span className="text-xs text-text-muted">+{result.numbers.length - 3} more</span>
-                                    )}
-                                </div>
-                                <button 
-                                    onClick={() => downloadFile(result)}
-                                    className="w-full btn-secondary flex items-center justify-center gap-2"
-                                >
-                                    <FileText size={14} /> Download
-                                </button>
-                            </div>
-                        ))}
+                    {filteredCountries.length === 0 && (
+                        <p className="text-center text-text-dim text-xs py-4">No countries found.</p>
+                    )}
+
+                    <div className="glass-panel p-4">
+                        <h3 className="section-title mb-3">Download Country Files</h3>
+                        <p className="text-xs text-text-dim mb-3">Each country = separate .txt file: <code className="text-brand">COUNTRY_COUNT_Date-Time.txt</code></p>
+                        <div className="flex gap-3 flex-wrap">
+                            <button onClick={downloadSelected} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download Selected</button>
+                            <button onClick={downloadAll} className="btn-secondary text-xs flex items-center gap-2"><Download size={12} /> Download All</button>
+                        </div>
+                    </div>
+
+                    <div className="text-center text-[10px] text-text-dim uppercase tracking-wider">
+                        Processed {totalProcessed} numbers • {Object.keys(groupedData).length} countries
                     </div>
                 </div>
             )}

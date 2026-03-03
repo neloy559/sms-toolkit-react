@@ -1,329 +1,402 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { UploadCloud, CheckCircle, Download, Trash2, PieChart, Filter } from 'lucide-react';
+import { UploadCloud, Copy, Download, Trash2, RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-interface CdrEntry {
-    raw: string;
-    phone: string;
-    otp: string | null;
-    otpLength: number;
-    cli: string;
-    country: string;
-    countryCode: string;
-}
+interface SmsRecord { id: number; num: string; otp: string; country: string; cli: string; len: number; orgSms: string; }
 
 export default function SmsCdrPro() {
+    const [allData, setAllData] = useState<SmsRecord[]>([]);
+    const [filteredData, setFilteredData] = useState<SmsRecord[]>([]);
+    const [statusMsg, setStatusMsg] = useState('');
+    const [statusClass, setStatusClass] = useState('');
+
+    // Filters
+    const [countries, setCountries] = useState<string[]>([]);
+    const [countryCounts, setCountryCounts] = useState<Record<string, number>>({});
+    const [clis, setClis] = useState<string[]>([]);
+    const [selectedCountry, setSelectedCountry] = useState('All');
+    const [selectedCLI, setSelectedCLI] = useState('All');
+    const [len5, setLen5] = useState(true);
+    const [len6, setLen6] = useState(true);
+    const [len8, setLen8] = useState(true);
+    const [customRegex, setCustomRegex] = useState('');
+    const [isDedupeActive, setIsDedupeActive] = useState(false);
+
+    // Stats
+    const [statTotal, setStatTotal] = useState(0);
+    const [statView, setStatView] = useState(0);
+    const [statFB, setStatFB] = useState(0);
+    const [statDupes, setStatDupes] = useState(0);
+
+    // Details panel
+    const [showDetails, setShowDetails] = useState(false);
+    const [detailTitle, setDetailTitle] = useState('');
+    const [detLen6, setDetLen6] = useState(0);
+    const [detLen8, setDetLen8] = useState(0);
+    const [detLenOther, setDetLenOther] = useState(0);
+    const [cliBreakdown, setCliBreakdown] = useState<{ cli: string; count: number; pct: string }[]>([]);
+
     const [isDragging, setIsDragging] = useState(false);
-    const [entries, setEntries] = useState<CdrEntry[]>([]);
-    const [filteredEntries, setFilteredEntries] = useState<CdrEntry[]>([]);
-    const [countryStats, setCountryStats] = useState<Record<string, number>>({});
-    const [otpLengthFilter, setOtpLengthFilter] = useState<string>('all');
-    const [countryFilter, setCountryFilter] = useState<string>('all');
-    const [cliFilter, setCliFilter] = useState<string>('');
-    const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const countryData: Record<string, { code: string; name: string }> = {
-        '880': { code: 'BD', name: 'Bangladesh' },
-        '1': { code: 'US', name: 'USA' },
-        '44': { code: 'UK', name: 'UK' },
-        '49': { code: 'DE', name: 'Germany' },
-        '33': { code: 'FR', name: 'France' },
-        '39': { code: 'IT', name: 'Italy' },
-        '34': { code: 'ES', name: 'Spain' },
-        '91': { code: 'IN', name: 'India' },
-        '92': { code: 'PK', name: 'Pakistan' },
-        '20': { code: 'EG', name: 'Egypt' },
-        '234': { code: 'NG', name: 'Nigeria' },
-        '254': { code: 'KE', name: 'Kenya' },
-        '27': { code: 'ZA', name: 'South Africa' },
-        '212': { code: 'MA', name: 'Morocco' },
-        '216': { code: 'TN', name: 'Tunisia' },
-        '971': { code: 'AE', name: 'UAE' },
-        '966': { code: 'SA', name: 'Saudi Arabia' },
-        '968': { code: 'OM', name: 'Oman' },
-        '973': { code: 'BH', name: 'Bahrain' },
-        '965': { code: 'KW', name: 'Kuwait' },
-        '974': { code: 'QA', name: 'Qatar' },
-    };
+    function handleFiles(files: FileList) {
+        const f = files[0]; if (!f) return;
+        resetApp();
+        setStatusMsg("Processing...");
+        setStatusClass('');
 
-    function detectCountryCode(phone: string): string {
-        const clean = phone.replace(/\D/g, '');
-        const prefixes = ['880', '234', '254', '212', '216', '971', '966', '968', '973', '965', '974', '92', '91', '44', '49', '33', '39', '34', '20', '27'];
-        
-        for (const prefix of prefixes) {
-            if (clean.startsWith(prefix)) return prefix;
-        }
-        if (clean.startsWith('1') && clean.length >= 11) return '1';
-        return 'unknown';
+        const r = new FileReader();
+        r.onload = function (e) {
+            try {
+                const d = new Uint8Array(e.target?.result as ArrayBuffer);
+                const wb = XLSX.read(d, { type: 'array' });
+                const s = wb.Sheets[wb.SheetNames[0]];
+                const rd: any[][] = XLSX.utils.sheet_to_json(s, { header: 1, defval: "" });
+
+                let hi = -1;
+                for (let i = 0; i < Math.min(rd.length, 25); i++) {
+                    const rw = rd[i]; if (!rw) continue;
+                    const hNames = rw.map((c: any) => String(c).trim().toLowerCase());
+                    const hasNum = hNames.some((h: string) => h.includes("number"));
+                    const hasSms = hNames.some((h: string) => h.includes("sms") || h.includes("message"));
+                    const hasRng = hNames.some((h: string) => h.includes("range") || h.includes("country"));
+                    const hasCli = hNames.some((h: string) => h.includes("cli") || h.includes("sender"));
+
+                    if ((hasNum && hasSms) && (hasRng || hasCli)) { hi = i; break; }
+                }
+                if (hi === -1) throw new Error("Columns not found. Need 'Number', 'SMS', and 'Range' or 'CLI'.");
+
+                const h = rd[hi].map((h: any) => String(h).trim());
+                const idx = {
+                    num: h.findIndex((x: string) => x.toLowerCase().includes("number")),
+                    rng: h.findIndex((x: string) => x.toLowerCase().includes("range") || x.toLowerCase().includes("country")),
+                    cli: h.findIndex((x: string) => x.toLowerCase().includes("cli") || x.toLowerCase().includes("sender")),
+                    sms: h.findIndex((x: string) => x.toLowerCase().includes("sms") || x.toLowerCase().includes("message"))
+                };
+
+                const newData: SmsRecord[] = [];
+                const cC: Record<string, number> = {};
+                const cL: Record<string, number> = {};
+                let fB = 0;
+
+                for (let i = hi + 1; i < rd.length; i++) {
+                    const row = rd[i]; if (!row || row.length === 0) continue;
+                    const n = (row[idx.num] !== undefined) ? String(row[idx.num]).trim() : "";
+                    const rng = (row[idx.rng] !== undefined) ? String(row[idx.rng]).trim() : "";
+                    const cli = (row[idx.cli] !== undefined) ? String(row[idx.cli]).trim() : "";
+                    const sms = (row[idx.sms] !== undefined) ? String(row[idx.sms]).trim() : "";
+                    if (!n) continue;
+
+                    const cty = rng.split(' ')[0] || "Unknown";
+                    if (!cC[cty]) cC[cty] = 0;
+                    if (!cL[cli]) cL[cli] = 0;
+
+                    let otp: string | null = null;
+                    const m = sms.match(/\d+/g);
+                    if (m) { for (const x of m) { if (x.length >= 4 && x.length <= 8) { otp = x; break; } } }
+
+                    if (otp) {
+                        cC[cty]++; cL[cli]++;
+                        if (cli.toLowerCase() === 'facebook') fB++;
+                        newData.push({ id: i, num: n, otp, country: cty, cli, len: otp.length, orgSms: sms });
+                    }
+                }
+
+                setAllData(newData);
+                setStatTotal(newData.length);
+                setStatFB(fB);
+
+                // Populate countries
+                const sortedCountries = Object.keys(cC).sort((a, b) => cC[b] - cC[a]);
+                setCountries(sortedCountries);
+                setCountryCounts(cC);
+
+                // Populate CLIs
+                setClis(Object.keys(cL).sort());
+
+                // Apply initial filters
+                applyFiltersOnData(newData, 'All', 'All', [5, 6, 8], '', false);
+
+                setStatusMsg(`Success! Loaded ${newData.length} records.`);
+                setStatusClass('success');
+            } catch (err: any) {
+                setStatusMsg("Error: " + err.message);
+                setStatusClass('');
+            }
+        };
+        r.readAsArrayBuffer(f);
     }
 
-    const processTextData = (text: string) => {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-        const parsedEntries: CdrEntry[] = [];
-        
-        for (const line of lines) {
-            const parts = line.split(/[|,;:\t]+/);
-            const phone = parts[0]?.replace(/\D/g, '') || '';
-            const otp = parts[1]?.replace(/\D/g, '') || null;
-            
-            if (phone.length >= 8) {
-                const code = detectCountryCode(phone);
-                parsedEntries.push({
-                    raw: line,
-                    phone,
-                    otp,
-                    otpLength: otp ? otp.length : 0,
-                    cli: parts[2] || '',
-                    country: countryData[code]?.name || 'Unknown',
-                    countryCode: code
-                });
+    function applyFiltersOnData(data: SmsRecord[], country: string, cli: string, lengths: number[], regex: string, dedupe: boolean) {
+        let ws = data;
+        if (country !== 'All') ws = ws.filter(d => d.country === country);
+        ws = ws.filter(item => {
+            const cm = (cli === 'All') || (item.cli === cli);
+            const lm = lengths.includes(item.len);
+            let rm = true;
+            if (regex) { try { const r = new RegExp(regex); rm = r.test(item.orgSms); } catch { rm = false; } }
+            return cm && lm && rm;
+        });
+        if (dedupe) {
+            const u = new Map<string, SmsRecord>();
+            ws.forEach(d => u.set(d.num, d));
+            ws = Array.from(u.values());
+        }
+        setFilteredData(ws);
+        setStatView(ws.length);
+        if (dedupe) {
+            const u = new Set(ws.map(d => d.num));
+            setStatDupes(u.size);
+        } else setStatDupes(0);
+    }
+
+    function applyFilters() {
+        const ls: number[] = [];
+        if (len5) ls.push(5);
+        if (len6) ls.push(6);
+        if (len8) ls.push(8);
+        applyFiltersOnData(allData, selectedCountry, selectedCLI, ls, customRegex, isDedupeActive);
+    }
+
+    function selectCountry(c: string) {
+        setSelectedCountry(c);
+        const ls: number[] = [];
+        if (len5) ls.push(5);
+        if (len6) ls.push(6);
+        if (len8) ls.push(8);
+
+        // Update CLIs for this country
+        if (c === 'All') {
+            const cL: Record<string, number> = {};
+            allData.forEach(d => { if (!cL[d.cli]) cL[d.cli] = 0; cL[d.cli]++; });
+            setClis(Object.keys(cL).sort());
+        } else {
+            const cd = allData.filter(d => d.country === c);
+            const cL: Record<string, number> = {};
+            cd.forEach(d => { if (!cL[d.cli]) cL[d.cli] = 0; cL[d.cli]++; });
+            setClis(Object.keys(cL).sort());
+
+            // Show details panel
+            if (cd.length > 0) {
+                setShowDetails(true);
+                setDetailTitle(`Deep Analysis: ${c}`);
+                renderDetails(cd);
             }
         }
-        
-        setEntries(parsedEntries);
-        applyFilters(parsedEntries, otpLengthFilter, countryFilter, cliFilter);
-        
-        const stats: Record<string, number> = {};
-        parsedEntries.forEach(entry => {
-            stats[entry.country] = (stats[entry.country] || 0) + 1;
-        });
-        setCountryStats(stats);
-    };
 
-    const applyFilters = (data: CdrEntry[], otpLen: string, country: string, cli: string) => {
-        let filtered = [...data];
-        
-        if (otpLen !== 'all') {
-            filtered = filtered.filter(e => e.otpLength === parseInt(otpLen));
-        }
-        
-        if (country !== 'all') {
-            filtered = filtered.filter(e => e.country === country);
-        }
-        
-        if (cli.trim()) {
-            filtered = filtered.filter(e => e.cli.toLowerCase().includes(cli.toLowerCase()));
-        }
-        
-        setFilteredEntries(filtered);
-    };
+        setSelectedCLI('All');
+        applyFiltersOnData(allData, c, 'All', ls, customRegex, isDedupeActive);
+    }
 
-    const handleFilterChange = (otpLen?: string, country?: string, cli?: string) => {
-        const newOtpLen = otpLen !== undefined ? otpLen : otpLengthFilter;
-        const newCountry = country !== undefined ? country : countryFilter;
-        const newCli = cli !== undefined ? cli : cliFilter;
-        
-        setOtpLengthFilter(newOtpLen);
-        setCountryFilter(newCountry);
-        setCliFilter(newCli);
-        
-        applyFilters(entries, newOtpLen, newCountry, newCli);
-    };
+    function renderDetails(d: SmsRecord[]) {
+        setDetLen6(d.filter(x => x.len === 6).length);
+        setDetLen8(d.filter(x => x.len === 8).length);
+        setDetLenOther(d.filter(x => x.len !== 6 && x.len !== 8).length);
+        const m: Record<string, number> = {};
+        d.forEach(x => { if (!m[x.cli]) m[x.cli] = 0; m[x.cli]++; });
+        const k = Object.keys(m).sort((a, b) => m[b] - m[a]);
+        setCliBreakdown(k.map(cli => ({ cli, count: m[cli], pct: ((m[cli] / d.length) * 100).toFixed(1) })));
+    }
 
-    const handleFileUpload = (file: File) => {
-        setError('');
-        const ext = file.name.split('.').pop()?.toLowerCase();
+    function toggleDuplicates() {
+        const newState = !isDedupeActive;
+        setIsDedupeActive(newState);
+        const ls: number[] = [];
+        if (len5) ls.push(5);
+        if (len6) ls.push(6);
+        if (len8) ls.push(8);
+        applyFiltersOnData(allData, selectedCountry, selectedCLI, ls, customRegex, newState);
+    }
 
-        if (ext === 'xlsx' || ext === 'xls') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const allStrings: string[] = [];
+    function downloadCSV() {
+        if (!filteredData.length) return;
+        const h = ["Number", "OTP", "Country", "CLI", "Length", "Original SMS"];
+        const rows = filteredData.map(d => [`"${d.num}"`, `"${d.otp}"`, `"${d.country}"`, `"${d.cli}"`, d.len, `"${d.orgSms.replace(/"/g, '""')}"`]);
+        const blob = new Blob([h.join(",") + "\n" + rows.map(x => x.join(",")).join("\n")], { type: 'text/csv' });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "sms_export.csv"; a.click();
+    }
 
-                    wb.SheetNames.forEach(name => {
-                        const sheet = wb.Sheets[name];
-                        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        rows.forEach(row => {
-                            if (row[0]) allStrings.push(String(row[0]));
-                        });
-                    });
-                    processTextData(allStrings.join('\n'));
-                } catch (err) {
-                    setError('Error reading Excel');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                processTextData(e.target?.result as string);
-            };
-            reader.readAsText(file);
-        }
-    };
+    function downloadExcel() {
+        if (!filteredData.length) return;
+        const ed = filteredData.map(d => ({ Number: d.num, OTP: d.otp, Country: d.country, CLI: d.cli, Length: d.len }));
+        const ws = XLSX.utils.json_to_sheet(ed);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "FilteredSMS");
+        XLSX.writeFile(wb, "sms_export.xlsx");
+    }
 
-    const downloadFiltered = () => {
-        const textData = filteredEntries.map(e => e.raw).join('\n');
-        const blob = new Blob([textData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `CDR_Filtered_${filteredEntries.length}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    function copyToClipboard() {
+        const output = filteredData.map(d => `${d.num}|${d.otp}`).join('\n');
+        if (output) navigator.clipboard.writeText(output);
+    }
 
-    const clearData = () => {
-        setEntries([]);
-        setFilteredEntries([]);
-        setCountryStats({});
-        setOtpLengthFilter('all');
-        setCountryFilter('all');
-        setCliFilter('');
-    };
+    function resetApp() {
+        setAllData([]); setFilteredData([]); setIsDedupeActive(false); setSelectedCountry('All');
+        setSelectedCLI('All'); setCustomRegex(''); setLen5(true); setLen6(true); setLen8(true);
+        setStatTotal(0); setStatView(0); setStatFB(0); setStatDupes(0);
+        setShowDetails(false); setCountries([]); setClis([]); setCountryCounts({});
+        setStatusMsg(''); setStatusClass('');
+    }
 
-    const uniqueCountries = Object.keys(countryStats);
-    const otpLengths = [...new Set(entries.map(e => e.otpLength).filter(l => l > 0))].sort();
+    // Trigger filter updates on filter changes
+    function onFilterChange(type: string, val: any) {
+        if (type === 'country') { selectCountry(val); return; }
+        if (type === 'cli') setSelectedCLI(val);
+        if (type === 'len5') setLen5(val);
+        if (type === 'len6') setLen6(val);
+        if (type === 'len8') setLen8(val);
+        if (type === 'regex') setCustomRegex(val);
+
+        // Need to use a timeout to let state update
+        setTimeout(() => applyFilters(), 10);
+    }
+
+    const outputVal = filteredData.map(d => `${d.num}|${d.otp}`).join('\n');
 
     return (
-        <div className="space-y-8">
-            {!entries.length ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 min-h-[80vh]">
+            {/* Sidebar */}
+            <div className="glass-panel p-4 space-y-4 h-fit lg:sticky lg:top-20">
+                <h3 className="section-title">Filters</h3>
+
+                {/* Upload */}
                 <div
-                    className={`glass-panel p-10 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted hover:bg-surface-hover'}`}
+                    className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.length > 0) handleFileUpload(e.dataTransfer.files[0]);
-                    }}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <PieChart size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-xl font-medium">Drop SMS CDR Data</p>
-                    <p className="text-sm text-text-muted mt-2">Filter by country, OTP length & CLI. Visualize trends.</p>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.length && handleFileUpload(e.target.files[0])}
-                        accept=".txt,.csv,.log,.xlsx,.xls"
-                    />
+                    <UploadCloud size={24} className="mx-auto mb-1 text-text-muted" />
+                    <p className="text-[10px] text-text-dim uppercase tracking-wider">Upload SMS CDR (.xlsx)</p>
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} />
                 </div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="glass-panel p-4 border-l-4 border-l-blue-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Total Records</p>
-                            <p className="text-2xl font-bold">{entries.length}</p>
-                        </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-brand">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Filtered</p>
-                            <p className="text-2xl font-bold">{filteredEntries.length}</p>
-                        </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-green-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">With OTP</p>
-                            <p className="text-2xl font-bold">{entries.filter(e => e.otp).length}</p>
-                        </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-purple-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Countries</p>
-                            <p className="text-2xl font-bold">{uniqueCountries.length}</p>
-                        </div>
-                    </div>
 
-                    <div className="glass-panel p-4">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <Filter size={18} className="text-text-muted" />
-                            <select 
-                                value={otpLengthFilter} 
-                                onChange={(e) => handleFilterChange(e.target.value, undefined, undefined)}
-                                className="input-field w-auto"
-                            >
-                                <option value="all">All OTP Lengths</option>
-                                {otpLengths.map(len => (
-                                    <option key={len} value={len}>{len} digits</option>
-                                ))}
-                            </select>
-                            <select 
-                                value={countryFilter} 
-                                onChange={(e) => handleFilterChange(undefined, e.target.value, undefined)}
-                                className="input-field w-auto"
-                            >
-                                <option value="all">All Countries</option>
-                                {uniqueCountries.map(c => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </select>
-                            <input
-                                type="text"
-                                placeholder="Filter by CLI..."
-                                value={cliFilter}
-                                onChange={(e) => handleFilterChange(undefined, undefined, e.target.value)}
-                                className="input-field w-40"
-                            />
-                            <button onClick={() => handleFilterChange('all', 'all', '')} className="btn-secondary text-sm">
-                                Clear Filters
+                {/* Country filter */}
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-dim uppercase tracking-wider">Country</label>
+                    <select value={selectedCountry} onChange={e => onFilterChange('country', e.target.value)} className="input-field text-xs w-full">
+                        <option value="All">All Countries</option>
+                        {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+
+                {/* CLI filter */}
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-dim uppercase tracking-wider">CLI / Sender</label>
+                    <select value={selectedCLI} onChange={e => { setSelectedCLI(e.target.value); setTimeout(applyFilters, 10); }} className="input-field text-xs w-full">
+                        <option value="All">All CLIs</option>
+                        {clis.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+
+                {/* OTP Length */}
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-dim uppercase tracking-wider">OTP Length</label>
+                    <div className="flex gap-3">
+                        <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={len5} onChange={e => { setLen5(e.target.checked); setTimeout(applyFilters, 10); }} /> 5</label>
+                        <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={len6} onChange={e => { setLen6(e.target.checked); setTimeout(applyFilters, 10); }} /> 6</label>
+                        <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={len8} onChange={e => { setLen8(e.target.checked); setTimeout(applyFilters, 10); }} /> 8</label>
+                    </div>
+                </div>
+
+                {/* Custom Regex */}
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-dim uppercase tracking-wider">Custom Regex</label>
+                    <input type="text" value={customRegex} onChange={e => { setCustomRegex(e.target.value); setTimeout(applyFilters, 10); }} className="input-field text-xs w-full" placeholder="e.g. Facebook|Whatsapp" />
+                </div>
+
+                <button onClick={toggleDuplicates} className={`w-full text-xs py-2 rounded ${isDedupeActive ? 'btn-primary' : 'btn-secondary'}`}>
+                    {isDedupeActive ? "Show All (Include Dupes)" : "Remove Duplicates"}
+                </button>
+
+                {selectedCountry !== 'All' && (
+                    <button onClick={() => selectCountry('All')} className="btn-secondary w-full text-xs flex items-center gap-2 justify-center"><RotateCcw size={12} /> Reset Country</button>
+                )}
+
+                {/* Country buttons */}
+                {countries.length > 0 && (
+                    <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                        {countries.map(c => (
+                            <button key={c} onClick={() => selectCountry(c)} className={`w-full text-left text-xs px-3 py-2 rounded flex justify-between items-center transition-colors ${selectedCountry === c ? 'bg-brand/20 text-brand border border-brand/30' : 'hover:bg-surface-hover border border-transparent'}`}>
+                                <span>{c}</span>
+                                <span className="text-[10px] font-bold">{countryCounts[c]}</span>
                             </button>
-                        </div>
+                        ))}
                     </div>
+                )}
+            </div>
 
-                    <div className="glass-panel p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">Country Distribution</h2>
-                            <div className="flex gap-2">
-                                <button onClick={downloadFiltered} className="btn-primary flex items-center gap-2 text-sm py-1.5">
-                                    <Download size={16} /> Download Filtered
-                                </button>
-                                <button onClick={clearData} className="btn-secondary flex items-center gap-2 text-sm py-1.5 text-rose-500 hover:bg-rose-500/10">
-                                    <Trash2 size={16} /> Reset
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {Object.entries(countryStats).sort((a, b) => b[1] - a[1]).map(([country, count]) => {
-                                const percentage = Math.round((count / entries.length) * 100);
-                                return (
-                                    <div key={country}>
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span>{country}</span>
-                                            <span className="text-text-muted">{count} ({percentage}%)</span>
-                                        </div>
-                                        <div className="w-full bg-surface-hover rounded-full h-2 overflow-hidden">
-                                            <div className="bg-brand h-2 rounded-full" style={{ width: `${percentage}%` }}></div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+            {/* Main Content */}
+            <div className="space-y-4">
+                {/* Status */}
+                {statusMsg && (
+                    <div className={`glass-panel p-3 text-xs ${statusClass === 'success' ? 'text-brand border-brand/20' : 'text-text-muted'}`}>
+                        {statusMsg}
                     </div>
+                )}
 
-                    {filteredEntries.length > 0 && (
-                        <div className="glass-panel p-4">
-                            <h3 className="font-bold mb-4">Sample Data (First 10)</h3>
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="glass-panel p-3 text-center">
+                        <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Total</div>
+                        <div className="text-lg font-bold text-brand">{statTotal}</div>
+                    </div>
+                    <div className="glass-panel p-3 text-center">
+                        <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Viewing</div>
+                        <div className="text-lg font-bold">{statView}</div>
+                    </div>
+                    <div className="glass-panel p-3 text-center">
+                        <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Facebook</div>
+                        <div className="text-lg font-bold">{statFB}</div>
+                    </div>
+                    <div className="glass-panel p-3 text-center">
+                        <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Deduped</div>
+                        <div className="text-lg font-bold">{statDupes}</div>
+                    </div>
+                </div>
+
+                {/* Details Panel */}
+                {showDetails && (
+                    <div className="glass-panel p-4 space-y-3">
+                        <h3 className="section-title">{detailTitle}</h3>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="text-center"><div className="text-[10px] text-text-dim">6-digit</div><div className="font-bold text-brand">{detLen6}</div></div>
+                            <div className="text-center"><div className="text-[10px] text-text-dim">8-digit</div><div className="font-bold text-brand">{detLen8}</div></div>
+                            <div className="text-center"><div className="text-[10px] text-text-dim">Other</div><div className="font-bold">{detLenOther}</div></div>
+                        </div>
+                        {cliBreakdown.length > 0 && (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-surface-hover">
-                                        <tr>
-                                            <th className="text-left p-2">Phone</th>
-                                            <th className="text-left p-2">OTP</th>
-                                            <th className="text-left p-2">Country</th>
-                                            <th className="text-left p-2">CLI</th>
-                                        </tr>
-                                    </thead>
+                                <table className="w-full text-xs">
+                                    <thead><tr><th className="text-left p-2 text-text-dim">CLI</th><th className="text-left p-2 text-text-dim">Count</th><th className="text-left p-2 text-text-dim">%</th></tr></thead>
                                     <tbody>
-                                        {filteredEntries.slice(0, 10).map((e, i) => (
-                                            <tr key={i} className="border-t border-border">
-                                                <td className="p-2 font-mono">{e.phone}</td>
-                                                <td className="p-2 font-mono text-brand">{e.otp || '-'}</td>
-                                                <td className="p-2">{e.country}</td>
-                                                <td className="p-2 text-text-muted">{e.cli || '-'}</td>
-                                            </tr>
+                                        {cliBreakdown.map(cb => (
+                                            <tr key={cb.cli} className="border-t border-border"><td className="p-2">{cb.cli}</td><td className="p-2">{cb.count}</td><td className="p-2">{cb.pct}%</td></tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </div>
+                )}
 
-            {error && <div className="text-red-500">{error}</div>}
+                {/* Output */}
+                <div className="glass-panel p-4">
+                    <div className="flex justify-between items-center mb-3">
+                        <h3 className="section-title">Output (Number|OTP)</h3>
+                        <div className="flex gap-2">
+                            <button onClick={copyToClipboard} className="btn-secondary text-xs flex items-center gap-1"><Copy size={12} /> Copy</button>
+                            <button onClick={downloadCSV} className="btn-secondary text-xs flex items-center gap-1"><Download size={12} /> CSV</button>
+                            <button onClick={downloadExcel} className="btn-primary text-xs flex items-center gap-1"><Download size={12} /> Excel</button>
+                        </div>
+                    </div>
+                    <textarea readOnly value={outputVal} className="input-field h-64 font-mono text-xs resize-none bg-surface" placeholder="Upload an SMS CDR file to begin..." />
+                </div>
+
+                <button onClick={resetApp} className="btn-secondary text-xs flex items-center gap-2"><Trash2 size={12} /> Reset All</button>
+            </div>
         </div>
     );
 }

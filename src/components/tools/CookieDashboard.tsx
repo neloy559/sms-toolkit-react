@@ -1,257 +1,227 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { UploadCloud, Download, AlertTriangle, FileCode2, Filter } from 'lucide-react';
+import { UploadCloud, Copy, Download, Trash2, Filter, CheckSquare, Square } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-interface CookieEntry {
-    raw: string;
-    domain: string;
-    series: string;
-    seriesType: string;
-    valid: boolean;
-}
+const COOKIE_PREFIXES = ['1000', '6154', '6155', '6156', '6157', '6158', 'Other'];
+
+interface CookieRecord { user_id: string; prefix: string; account_info: string; cookie_string: string; }
 
 export default function CookieDashboard() {
+    const [parsedData, setParsedData] = useState<CookieRecord[]>([]);
+    const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set(COOKIE_PREFIXES));
+    const [showDashboard, setShowDashboard] = useState(false);
+    const [showFilterPanel, setShowFilterPanel] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [entries, setEntries] = useState<CookieEntry[]>([]);
-    const [filteredEntries, setFilteredEntries] = useState<CookieEntry[]>([]);
-    const [seriesFilter, setSeriesFilter] = useState<string>('all');
-    const [domainStats, setDomainStats] = useState<Record<string, number>>({});
-    const [seriesStats, setSeriesStats] = useState<Record<string, number>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const seriesPatterns: Record<string, RegExp> = {
-        '1000xxx': /^1000\d{3}$/,
-        '6154xxx': /^6154\d{3}$/,
-        '2000xxx': /^2000\d{3}$/,
-        '3000xxx': /^3000\d{3}$/,
-        '4000xxx': /^4000\d{3}$/,
-        '5000xxx': /^5000\d{3}$/,
-        '7000xxx': /^7000\d{3}$/,
-        '8000xxx': /^8000\d{3}$/,
-    };
-
-    const processCookieData = (text: string) => {
-        const lines = text.split('\n').filter(l => l.trim().length > 0);
-        const parsedEntries: CookieEntry[] = [];
-        const domainMap: Record<string, number> = {};
-        const seriesMap: Record<string, number> = {};
-        
-        for (const line of lines) {
-            if (line.startsWith('#') || line.startsWith('http')) continue;
-            
-            const parts = line.split('\t');
-            let domain = '';
-            let cookieId = '';
-            let seriesType = 'Unknown';
-            
-            if (parts.length >= 2) {
-                domain = parts[0].replace(/^\./, '');
-                const value = parts[parts.length - 1];
-                cookieId = value.replace(/\D/g, '').slice(-7);
-                
-                for (const [name, pattern] of Object.entries(seriesPatterns)) {
-                    if (pattern.test(cookieId)) {
-                        seriesType = name;
-                        break;
-                    }
-                }
-                
-                parsedEntries.push({
-                    raw: line,
-                    domain,
-                    series: cookieId,
-                    seriesType,
-                    valid: parts.length >= 7
-                });
-                
-                domainMap[domain] = (domainMap[domain] || 0) + 1;
-                seriesMap[seriesType] = (seriesMap[seriesType] || 0) + 1;
-            }
-        }
-        
-        setEntries(parsedEntries);
-        setFilteredEntries(parsedEntries);
-        setDomainStats(domainMap);
-        setSeriesStats(seriesMap);
-    };
-
-    const handleFileUpload = (file: File) => {
+    function handleFile(file: File) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            processCookieData(e.target?.result as string);
+            processContent(e.target?.result as string);
         };
         reader.readAsText(file);
-    };
+    }
 
-    const handleSeriesFilter = (series: string) => {
-        setSeriesFilter(series);
-        if (series === 'all') {
-            setFilteredEntries(entries);
+    function processContent(content: string) {
+        const lines = content.trim().split('\n');
+        const newData: CookieRecord[] = [];
+
+        lines.forEach(line => {
+            const parts = line.split('|');
+            if (parts.length >= 3) {
+                const userId = parts[0].trim();
+                const prefix = userId.substring(0, 4);
+                let category = 'Other';
+                if (COOKIE_PREFIXES.includes(prefix)) category = prefix;
+
+                newData.push({
+                    user_id: userId,
+                    prefix: category,
+                    account_info: parts[1].trim(),
+                    cookie_string: parts[2].trim()
+                });
+            }
+        });
+
+        if (newData.length > 0) {
+            setParsedData(newData);
+            setSelectedFilters(new Set(COOKIE_PREFIXES));
+            setShowDashboard(true);
         } else {
-            setFilteredEntries(entries.filter(e => e.seriesType === series));
+            alert("No valid data found.");
         }
-    };
+    }
 
-    const downloadExcel = () => {
-        const ws = XLSX.utils.json_to_sheet(filteredEntries.map(e => ({
-            Domain: e.domain,
-            Series: e.series,
-            SeriesType: e.seriesType,
-            Valid: e.valid
-        })));
-        
+    const filteredData = parsedData.filter(row => selectedFilters.has(row.prefix));
+
+    // Calculate counts for distribution
+    const counts: Record<string, number> = {};
+    COOKIE_PREFIXES.forEach(p => counts[p] = 0);
+    filteredData.forEach(row => {
+        if (counts[row.prefix] !== undefined) counts[row.prefix]++;
+        else counts['Other']++;
+    });
+
+    let maxVal = 0;
+    for (const key in counts) if (counts[key] > maxVal) maxVal = counts[key];
+
+    function toggleFilter(prefix: string) {
+        const s = new Set(selectedFilters);
+        if (s.has(prefix)) s.delete(prefix); else s.add(prefix);
+        setSelectedFilters(s);
+    }
+
+    function selectAllFilters(select: boolean) {
+        if (select) setSelectedFilters(new Set(COOKIE_PREFIXES));
+        else setSelectedFilters(new Set());
+    }
+
+    function copyForGoogleSheets() {
+        if (filteredData.length === 0) return;
+        let tsvContent = "User ID\tPassword\tCookie\n";
+        filteredData.forEach(row => {
+            tsvContent += `${row.user_id}\t${row.account_info}\t${row.cookie_string}\n`;
+        });
+        navigator.clipboard.writeText(tsvContent);
+    }
+
+    function exportToExcel() {
+        if (filteredData.length === 0) return;
+        const buckets: Record<string, any[]> = {};
+        filteredData.forEach(row => {
+            if (!buckets[row.prefix]) buckets[row.prefix] = [];
+            buckets[row.prefix].push({ "User ID": row.user_id, "Password": row.account_info, "Cookie": row.cookie_string });
+        });
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Cookies');
-        XLSX.writeFile(wb, 'cookie_analysis.xlsx');
-    };
-
-    const downloadCSV = () => {
-        const csv = 'Domain,Series,SeriesType,Valid\n' + 
-            filteredEntries.map(e => `${e.domain},${e.series},${e.seriesType},${e.valid}`).join('\n');
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'cookie_analysis.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-    const resetTool = () => {
-        setEntries([]);
-        setFilteredEntries([]);
-        setDomainStats({});
-        setSeriesStats({});
-        setSeriesFilter('all');
-    };
-
-    const validCount = entries.filter(e => e.valid).length;
-    const availableSeries = Object.keys(seriesStats).filter(s => s !== 'Unknown');
+        for (const [prefix, data] of Object.entries(buckets)) {
+            if (data.length > 0) {
+                const ws = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, ws, prefix);
+            }
+        }
+        XLSX.writeFile(wb, "Filtered_Cookies.xlsx");
+    }
 
     return (
-        <div className="space-y-8">
-            {!entries.length ? (
-                <div
-                    className={`glass-panel p-10 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted hover:bg-surface-hover'}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.length > 0) handleFileUpload(e.dataTransfer.files[0]);
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <FileCode2 size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-xl font-medium">Drop Cookie File (Netscape Format)</p>
-                    <p className="text-sm text-text-muted mt-2">Parse & filter by ID series (1000xxx, 6154xxx)</p>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.length && handleFileUpload(e.target.files[0])}
-                        accept=".txt"
-                    />
-                </div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="glass-panel p-4 border-l-4 border-l-blue-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Total Cookies</p>
-                            <p className="text-2xl font-bold">{entries.length}</p>
+        <div className="space-y-6">
+            {/* Upload */}
+            <div
+                className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
+                <p className="text-sm font-semibold uppercase tracking-wider">Upload Cookie File</p>
+                <p className="text-xs text-text-dim mt-1">Format: UserID|Password|Cookie (pipe-delimited .txt)</p>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv" />
+            </div>
+
+            {showDashboard && (
+                <>
+                    {/* Top Bar */}
+                    <div className="glass-panel p-3 flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-4">
+                            <div className="text-xs"><span className="text-text-dim">Total:</span> <span className="text-brand font-bold">{parsedData.length}</span></div>
+                            <div className="text-xs"><span className="text-text-dim">Filtered:</span> <span className="font-bold">{filteredData.length}</span></div>
                         </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-green-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Valid Format</p>
-                            <p className="text-2xl font-bold">{validCount}</p>
-                        </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-yellow-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Filtered</p>
-                            <p className="text-2xl font-bold">{filteredEntries.length}</p>
-                        </div>
-                        <div className="glass-panel p-4 border-l-4 border-l-purple-500">
-                            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Domains</p>
-                            <p className="text-2xl font-bold">{Object.keys(domainStats).length}</p>
-                        </div>
+                        <button onClick={() => setShowFilterPanel(!showFilterPanel)} className="btn-secondary text-xs flex items-center gap-1"><Filter size={12} /> Filters</button>
                     </div>
 
-                    <div className="glass-panel p-4">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <Filter size={18} className="text-text-muted" />
-                            <span className="text-text-muted">Filter by Series:</span>
-                            <select 
-                                value={seriesFilter} 
-                                onChange={(e) => handleSeriesFilter(e.target.value)}
-                                className="input-field w-auto"
-                            >
-                                <option value="all">All Series</option>
-                                {availableSeries.map(s => (
-                                    <option key={s} value={s}>{s} ({seriesStats[s]})</option>
+                    {/* Filter Panel */}
+                    {showFilterPanel && (
+                        <div className="glass-panel p-4">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="section-title">Series Filters</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => selectAllFilters(true)} className="btn-secondary text-xs py-1"><CheckSquare size={12} /> All</button>
+                                    <button onClick={() => selectAllFilters(false)} className="btn-secondary text-xs py-1"><Square size={12} /> None</button>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                {COOKIE_PREFIXES.map(prefix => (
+                                    <label key={prefix} className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <input type="checkbox" checked={selectedFilters.has(prefix)} onChange={() => toggleFilter(prefix)} />
+                                        {prefix}xxx
+                                    </label>
                                 ))}
-                            </select>
-                            <button onClick={() => handleSeriesFilter('all')} className="btn-secondary text-sm">
-                                Clear Filter
-                            </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="glass-panel p-6">
-                            <h2 className="text-xl font-bold mb-6 border-b border-border pb-4">Series Distribution</h2>
-                            <div className="space-y-4">
-                                {Object.entries(seriesStats).sort((a, b) => b[1] - a[1]).map(([series, count]) => {
-                                    const percentage = Math.round((count / entries.length) * 100);
-                                    return (
-                                        <div key={series}>
-                                            <div className="flex justify-between text-sm mb-1">
-                                                <span className="font-mono">{series}</span>
-                                                <span className="text-text-muted">{count} ({percentage}%)</span>
-                                            </div>
-                                            <div className="w-full bg-surface-hover rounded-full h-2 overflow-hidden">
-                                                <div className="bg-brand h-2 rounded-full" style={{ width: `${percentage}%` }}></div>
-                                            </div>
+                    {/* Distribution Chart */}
+                    <div className="glass-panel p-4">
+                        <h3 className="section-title mb-3">Distribution</h3>
+                        <div className="space-y-2">
+                            {Object.entries(counts).map(([prefix, count]) => {
+                                const existsInDataset = parsedData.some(r => r.prefix === prefix);
+                                if (!existsInDataset) return null;
+                                const widthPercent = maxVal > 0 ? (count / maxVal) * 100 : 0;
+                                const isActive = selectedFilters.has(prefix);
+
+                                return (
+                                    <div key={prefix} className="flex items-center gap-3">
+                                        <div className="w-16 text-xs text-text-dim font-mono">{prefix}xxx</div>
+                                        <div className="flex-1 h-5 rounded bg-surface overflow-hidden">
+                                            <div className={`h-full rounded transition-all duration-300 ${isActive ? 'bg-brand' : 'bg-surface-hover'}`} style={{ width: `${widthPercent}%` }} />
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        <div className={`w-12 text-right text-xs font-bold ${isActive ? 'text-text' : 'text-text-dim'}`}>{count}</div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        <div className="glass-panel p-6">
-                            <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-                                <h2 className="text-xl font-bold">Domain Spread</h2>
-                                <button onClick={resetTool} className="text-text-muted hover:text-white transition-colors text-sm">
-                                    Reset Tool
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
-                                {Object.entries(domainStats)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .slice(0, 20)
-                                    .map(([domain, count]) => (
-                                        <div key={domain} className="bg-background rounded-lg p-3 border border-border flex justify-between items-center">
-                                            <span className="font-mono text-sm truncate max-w-[70%]">{domain}</span>
-                                            <span className="bg-surface-hover px-2 py-0.5 rounded text-xs text-brand font-bold">{count}</span>
-                                        </div>
-                                    ))
-                                }
-                            </div>
+                        {/* Mini stat cards */}
+                        <div className="flex flex-wrap gap-2 mt-4">
+                            {Object.entries(counts).map(([prefix, count]) => {
+                                const existsInDataset = parsedData.some(r => r.prefix === prefix);
+                                if (!existsInDataset) return null;
+                                const isActive = selectedFilters.has(prefix);
+                                return (
+                                    <div key={prefix} className={`px-3 py-2 rounded text-xs font-mono text-center ${isActive ? 'bg-brand/10 text-brand border border-brand/20' : 'bg-surface text-text-dim border border-border'}`}>
+                                        {prefix}<br /><span className="font-bold">{count}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    <div className="glass-panel p-4 flex justify-between items-center">
-                        <span className="text-text-muted">Export filtered data</span>
-                        <div className="flex gap-2">
-                            <button onClick={downloadCSV} className="btn-secondary flex items-center gap-2">
-                                <Download size={16} /> CSV
-                            </button>
-                            <button onClick={downloadExcel} className="btn-primary flex items-center gap-2">
-                                <Download size={16} /> Excel
-                            </button>
+                    {/* Actions */}
+                    <div className="flex gap-3 flex-wrap">
+                        <button onClick={copyForGoogleSheets} className="btn-secondary text-xs flex items-center gap-2"><Copy size={12} /> Copy for Sheets (TSV)</button>
+                        <button onClick={exportToExcel} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Export to Excel</button>
+                        <button onClick={() => { setParsedData([]); setShowDashboard(false); }} className="btn-secondary text-xs flex items-center gap-2"><Trash2 size={12} /> Reset</button>
+                    </div>
+
+                    {/* Table */}
+                    <div className="glass-panel overflow-hidden">
+                        <div className="overflow-x-auto max-h-[400px]">
+                            <table className="w-full text-xs">
+                                <thead className="bg-surface-hover sticky top-0">
+                                    <tr>
+                                        <th className="text-left p-3 section-title">User ID</th>
+                                        <th className="text-left p-3 section-title">Password</th>
+                                        <th className="text-left p-3 section-title">Series</th>
+                                        <th className="text-left p-3 section-title">Cookie</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredData.map((row, i) => (
+                                        <tr key={i} className="border-t border-border hover:bg-surface-hover">
+                                            <td className="p-3 font-mono">{row.user_id}</td>
+                                            <td className="p-3 font-medium">{row.account_info}</td>
+                                            <td className="p-3"><span className="badge bg-surface-hover text-brand">{row.prefix}</span></td>
+                                            <td className="p-3 max-w-[200px] truncate text-text-dim font-mono" title={row.cookie_string}>{row.cookie_string}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

@@ -1,253 +1,215 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { UploadCloud, Download, FileText, FolderOpen, CheckCircle } from 'lucide-react';
+import { UploadCloud, Download, Trash2 } from 'lucide-react';
+import { otpCountryCodes, otpSortedCodes } from '@/lib/countryDict';
+import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 
-interface OtpEntry {
-    phone: string;
-    otp: string;
-    country: string;
-    countryCode: string;
-}
-
-interface SplitResult {
-    country: string;
-    countryCode: string;
-    entries: OtpEntry[];
-    count: number;
-}
-
-const countryData: Record<string, { code: string; name: string }> = {
-    '880': { code: 'BD', name: 'Bangladesh' },
-    '1': { code: 'US', name: 'USA' },
-    '44': { code: 'UK', name: 'UK' },
-    '49': { code: 'DE', name: 'Germany' },
-    '33': { code: 'FR', name: 'France' },
-    '39': { code: 'IT', name: 'Italy' },
-    '34': { code: 'ES', name: 'Spain' },
-    '91': { code: 'IN', name: 'India' },
-    '92': { code: 'PK', name: 'Pakistan' },
-    '20': { code: 'EG', name: 'Egypt' },
-    '234': { code: 'NG', name: 'Nigeria' },
-    '254': { code: 'KE', name: 'Kenya' },
-    '27': { code: 'ZA', name: 'South Africa' },
-    '212': { code: 'MA', name: 'Morocco' },
-    '216': { code: 'TN', name: 'Tunisia' },
-    '971': { code: 'AE', name: 'UAE' },
-    '966': { code: 'SA', name: 'Saudi Arabia' },
-    '968': { code: 'OM', name: 'Oman' },
-    '973': { code: 'BH', name: 'Bahrain' },
-    '965': { code: 'KW', name: 'Kuwait' },
-    '974': { code: 'QA', name: 'Qatar' },
-};
-
-function detectCountryCode(phone: string): string {
-    const clean = phone.replace(/\D/g, '');
-    
-    const prefixes = ['880', '234', '254', '212', '216', '971', '966', '968', '973', '965', '974', '92', '91', '44', '49', '33', '39', '34', '20', '27'];
-    
-    for (const prefix of prefixes) {
-        if (clean.startsWith(prefix)) {
-            return prefix;
-        }
-    }
-    
-    if (clean.startsWith('1') && clean.length >= 11) return '1';
-    
-    return 'unknown';
-}
-
-function parseOtpLine(line: string): OtpEntry | null {
-    const trimmed = line.trim();
-    if (!trimmed) return null;
-    
-    const parts = trimmed.split(/[|,;:\t]+/);
-    
-    if (parts.length >= 2) {
-        const phone = parts[0].replace(/\D/g, '');
-        const otp = parts[1].replace(/\D/g, '');
-        
-        if (phone.length >= 8 && otp.length >= 3 && otp.length <= 10) {
-            const code = detectCountryCode(phone);
-            const countryInfo = countryData[code] || { code: 'XX', name: 'Unknown' };
-            
-            return {
-                phone,
-                otp,
-                country: countryInfo.name,
-                countryCode: code
-            };
-        }
-    }
-    
-    return null;
-}
+interface OtpCountryGroup { code: string; name: string; flag: string; numbers: string[]; }
 
 export default function PhoneOtpSplitter() {
+    const [inputVal, setInputVal] = useState('');
+    const [groupedData, setGroupedData] = useState<Record<string, OtpCountryGroup>>({});
+    const [showDashboard, setShowDashboard] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
+    const [unknownCount, setUnknownCount] = useState(0);
+    const [exportFormat, setExportFormat] = useState('txt');
     const [isDragging, setIsDragging] = useState(false);
-    const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
-    const [totalEntries, setTotalEntries] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const processFile = async (file: File) => {
-        const text = await file.text();
-        const lines = text.split('\n');
-        
-        const entries: OtpEntry[] = [];
-        
-        for (const line of lines) {
-            const entry = parseOtpLine(line);
-            if (entry) {
-                entries.push(entry);
+    function otpGetCountry(phone: string): { code: string; name: string; flag: string } {
+        phone = phone.replace(/\D/g, '');
+        for (const code of otpSortedCodes) {
+            if (phone.startsWith(code)) {
+                return { code, ...otpCountryCodes[code] };
             }
         }
-        
-        setTotalEntries(entries.length);
-        
-        const countryMap = new Map<string, OtpEntry[]>();
-        
-        for (const entry of entries) {
-            const key = entry.countryCode;
-            if (!countryMap.has(key)) {
-                countryMap.set(key, []);
+        return { code: 'unknown', name: 'Unknown', flag: '❓' };
+    }
+
+    function handleFile(file: File) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target?.result as string;
+            setInputVal(content);
+            processFromText(content);
+        };
+        reader.readAsText(file);
+    }
+
+    function processFromText(text?: string) {
+        const input = text || inputVal;
+        const lines = input.split('\n').filter(line => line.trim());
+        const grouped: Record<string, OtpCountryGroup> = {};
+        let unk = 0;
+
+        lines.forEach(line => {
+            const [phone, otp] = line.split('|');
+            if (phone && otp) {
+                const country = otpGetCountry(phone.trim());
+                const key = country.code;
+                if (!grouped[key]) {
+                    grouped[key] = { ...country, numbers: [] };
+                }
+                grouped[key].numbers.push(line.trim());
+                if (key === 'unknown') unk++;
             }
-            countryMap.get(key)!.push(entry);
-        }
-        
-        const results: SplitResult[] = [];
-        
-        countryMap.forEach((countryEntries, code) => {
-            const countryInfo = countryData[code] || { code: 'XX', name: 'Unknown' };
-            results.push({
-                country: countryInfo.name,
-                countryCode: code,
-                entries: countryEntries,
-                count: countryEntries.length
-            });
         });
-        
-        results.sort((a, b) => b.count - a.count);
-        setSplitResults(results);
-    };
 
-    const handleFileUpload = (file: File) => {
-        processFile(file);
-    };
+        setGroupedData(grouped);
+        setTotalCount(lines.length);
+        setUnknownCount(unk);
+        setShowDashboard(true);
+    }
 
-    const downloadFile = (result: SplitResult) => {
-        const content = result.entries
-            .map(e => `${e.phone}|${e.otp}`)
-            .join('\n');
-        
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${result.countryCode}_${result.country.replace(/\s/g, '_')}_otp.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    function downloadCountry(code: string, format: string = 'txt') {
+        const country = groupedData[code];
+        if (!country) return;
 
-    const downloadAllAsZip = async () => {
-        const zip = new JSZip();
-        
-        for (const result of splitResults) {
-            const content = result.entries
-                .map(e => `${e.phone}|${e.otp}`)
-                .join('\n');
-            
-            zip.file(`${result.countryCode}_${result.country.replace(/\s/g, '_')}_otp.txt`, content);
+        if (format === 'xlsx') {
+            const data = country.numbers.map(line => {
+                const [phone, otp] = line.split('|');
+                return { Phone: phone, OTP: otp };
+            });
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Phone OTP');
+            XLSX.writeFile(wb, `${country.name.replace(/\s+/g, '_')}_${code}.xlsx`);
+            return;
         }
-        
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'otp_split_by_country.zip';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
 
-    const resetTool = () => {
-        setSplitResults([]);
-        setTotalEntries(0);
-    };
+        let content: string, filename: string, mimeType: string;
+        if (format === 'csv') {
+            const rows = country.numbers.map(line => {
+                const [phone, otp] = line.split('|');
+                return `${phone},${otp}`;
+            });
+            content = 'Phone,OTP\n' + rows.join('\n');
+            filename = `${country.name.replace(/\s+/g, '_')}_${code}.csv`;
+            mimeType = 'text/csv';
+        } else {
+            content = country.numbers.join('\n');
+            filename = `${country.name.replace(/\s+/g, '_')}_${code}.txt`;
+            mimeType = 'text/plain';
+        }
+
+        const blob = new Blob([content], { type: mimeType });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    async function downloadAll() {
+        const countries = Object.values(groupedData);
+
+        if (exportFormat === 'zip') {
+            const zip = new JSZip();
+            countries.forEach(country => {
+                const content = country.numbers.join('\n');
+                zip.file(`${country.name.replace(/\s+/g, '_')}_${country.code}.txt`, content);
+            });
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'phone_otp_by_country.zip';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } else if (exportFormat === 'xlsx') {
+            const wb = XLSX.utils.book_new();
+            countries.forEach(country => {
+                const data = country.numbers.map(line => {
+                    const [phone, otp] = line.split('|');
+                    return { Phone: phone, OTP: otp, Country: country.name, Code: country.code };
+                });
+                const ws = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, ws, country.name.substring(0, 30));
+            });
+            XLSX.writeFile(wb, 'phone_otp_all_countries.xlsx');
+        } else {
+            countries.forEach((country, index) => {
+                setTimeout(() => downloadCountry(country.code, exportFormat), index * 200);
+            });
+        }
+    }
+
+    function resetTool() {
+        setInputVal(''); setGroupedData({}); setShowDashboard(false); setTotalCount(0); setUnknownCount(0);
+    }
+
+    const sortedCountries = Object.values(groupedData).sort((a, b) => b.numbers.length - a.numbers.length);
 
     return (
-        <div className="space-y-8">
-            {!splitResults.length ? (
-                <div
-                    className={`glass-panel p-10 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted hover:bg-surface-hover'}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.length > 0) handleFileUpload(e.dataTransfer.files[0]);
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <FolderOpen size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-xl font-medium">Drop Phone|OTP File</p>
-                    <p className="text-sm text-text-muted mt-2">Format: phone|otp (one per line)</p>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.length && handleFileUpload(e.target.files[0])}
-                        accept=".txt,.csv"
-                    />
-                </div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <div className="glass-panel px-6 py-3">
-                            <p className="text-text-muted text-xs uppercase tracking-wider">Total OTP Entries</p>
-                            <p className="font-bold text-2xl">{totalEntries}</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={downloadAllAsZip} className="btn-primary flex items-center gap-2">
-                                <Download size={16} /> Download All (ZIP)
-                            </button>
-                            <button onClick={resetTool} className="btn-secondary">
-                                Reset
-                            </button>
-                        </div>
+        <div className="space-y-6">
+            {/* Upload */}
+            <div
+                className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
+                <p className="text-sm font-semibold uppercase tracking-wider">Upload Phone|OTP File</p>
+                <p className="text-xs text-text-dim mt-1">.txt format (phone|OTP per line)</p>
+                <input type="file" ref={fileInputRef} className="hidden" accept=".txt" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} />
+            </div>
+
+            <textarea
+                value={inputVal}
+                onChange={e => setInputVal(e.target.value)}
+                className="input-field h-32 font-mono text-xs resize-none"
+                placeholder={"Paste phone|OTP data (one per line)\n6288801256516|123456\n2609555123456|789012\n249123456789|345678"}
+            />
+
+            <div className="flex gap-2 justify-end">
+                <button onClick={resetTool} className="btn-secondary flex items-center gap-2 text-xs"><Trash2 size={12} /> Reset</button>
+                <button onClick={() => processFromText()} className="btn-primary text-xs">Process & Split →</button>
+            </div>
+
+            {showDashboard && (
+                <div className="space-y-4">
+                    {/* Stats */}
+                    <div className="glass-panel p-3 text-center text-xs text-text-muted">
+                        Total: {totalCount} numbers | Countries: {sortedCountries.length}{unknownCount > 0 ? ` | Unknown: ${unknownCount}` : ''}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {splitResults.map((result, i) => (
-                            <div key={i} className="glass-panel p-5 hover:border-brand/50 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
+                    {/* Country Cards */}
+                    <div className="space-y-2">
+                        {sortedCountries.map(country => (
+                            <div key={country.code} className="glass-panel p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{country.flag}</span>
                                     <div>
-                                        <h3 className="font-bold text-lg">{result.country}</h3>
-                                        <p className="text-text-muted text-sm">Code: +{result.countryCode}</p>
-                                    </div>
-                                    <div className="bg-brand/10 px-3 py-1 rounded-full">
-                                        <span className="text-brand font-bold">{result.count}</span>
+                                        <div className="text-sm font-bold">{country.name}</div>
+                                        <div className="text-[10px] text-text-dim">+{country.code}</div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-1 mb-4 max-h-24 overflow-y-auto">
-                                    {result.entries.slice(0, 3).map((entry, j) => (
-                                        <div key={j} className="text-xs text-text-muted font-mono bg-surface-hover px-2 py-1 rounded flex justify-between">
-                                            <span>{entry.phone.substring(0, 10)}...</span>
-                                            <span className="text-brand">{entry.otp}</span>
-                                        </div>
-                                    ))}
-                                    {result.entries.length > 3 && (
-                                        <span className="text-xs text-text-muted">+{result.entries.length - 3} more</span>
-                                    )}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-brand font-bold">{country.numbers.length}</span>
+                                    <button onClick={() => downloadCountry(country.code, exportFormat)} className="btn-secondary text-xs py-1"><Download size={12} /></button>
                                 </div>
-                                <button 
-                                    onClick={() => downloadFile(result)}
-                                    className="w-full btn-secondary flex items-center justify-center gap-2"
-                                >
-                                    <FileText size={14} /> Download
-                                </button>
                             </div>
                         ))}
                     </div>
+
+                    {/* Export Section */}
+                    {sortedCountries.length > 1 && (
+                        <div className="glass-panel p-4">
+                            <h3 className="section-title mb-3">Export All</h3>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <select value={exportFormat} onChange={e => setExportFormat(e.target.value)} className="input-field w-auto text-xs">
+                                    <option value="txt">Text (.txt)</option>
+                                    <option value="xlsx">Excel (.xlsx)</option>
+                                    <option value="csv">CSV (.csv)</option>
+                                    <option value="zip">ZIP Archive (.zip)</option>
+                                </select>
+                                <button onClick={downloadAll} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download All</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

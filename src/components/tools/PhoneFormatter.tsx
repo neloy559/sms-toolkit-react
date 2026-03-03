@@ -1,286 +1,255 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { UploadCloud, Download, FileText, ArrowRight, CheckCircle } from 'lucide-react';
+import { UploadCloud, Copy, Download, Trash2, Search, CheckSquare, Square } from 'lucide-react';
+import { ivasCountryDict, sortedCountryCodes } from '@/lib/countryDict';
 import * as XLSX from 'xlsx';
 
-interface ProcessedNumber {
-    original: string;
-    cleaned: string;
-    country: string;
-    countryCode: string;
-    valid: boolean;
-}
-
-const countryData: Record<string, { code: string; pattern: RegExp }> = {
-    '880': { code: 'BD', pattern: /^8801[3-9]\d{8}$/ },
-    '1': { code: 'US', pattern: /^1[2-9]\d{9}$/ },
-    '44': { code: 'UK', pattern: /^447\d{9}$/ },
-    '49': { code: 'DE', pattern: /^49[1-9]\d{10}$/ },
-    '33': { code: 'FR', pattern: /^33[6-7]\d{8}$/ },
-    '39': { code: 'IT', pattern: /^39[3-9]\d{9}$/ },
-    '34': { code: 'ES', pattern: /^34[6-9]\d{8}$/ },
-    '91': { code: 'IN', pattern: /^91[6-9]\d{9}$/ },
-    '92': { code: 'PK', pattern: /^92[3-5]\d{8}$/ },
-    '20': { code: 'EG', pattern: /^201[0-2]\d{7}$/ },
-    '234': { code: 'NG', pattern: /^234[7-9]\d{8}$/ },
-    '254': { code: 'KE', pattern: /^2547\d{8}$/ },
-    '27': { code: 'ZA', pattern: /^27[7-9]\d{8}$/ },
-    '212': { code: 'MA', pattern: /^212[6-7]\d{7}$/ },
-    '216': { code: 'TN', pattern: /^216[2-9]\d{6}$/ },
-    '971': { code: 'AE', pattern: /^9715\d{8}$/ },
-    '966': { code: 'SA', pattern: /^9665\d{8}$/ },
-    '968': { code: 'OM', pattern: /^9689\d{7}$/ },
-    '973': { code: 'BH', pattern: /^9733\d{7}$/ },
-    '965': { code: 'KW', pattern: /^9655\d{7}$/ },
-    '974': { code: 'QA', pattern: /^9743\d{7}$/ },
-};
-
-function detectCountry(phone: string): { country: string; countryCode: string } {
-    const clean = phone.replace(/\D/g, '');
-    
-    for (const [prefix, data] of Object.entries(countryData)) {
-        if (clean.startsWith(prefix) && data.pattern.test(clean)) {
-            return { country: data.code, countryCode: prefix };
-        }
-    }
-    
-    if (clean.startsWith('880')) return { country: 'BD', countryCode: '880' };
-    if (clean.startsWith('1') && clean.length === 11) return { country: 'US', countryCode: '1' };
-    if (clean.startsWith('44')) return { country: 'UK', countryCode: '44' };
-    if (clean.startsWith('49') && clean.length === 12) return { country: 'DE', countryCode: '49' };
-    if (clean.startsWith('33') && clean.length === 11) return { country: 'FR', countryCode: '33' };
-    if (clean.startsWith('91') && clean.length === 12) return { country: 'IN', countryCode: '91' };
-    
-    return { country: 'Unknown', countryCode: '' };
-}
-
-function cleanPhoneNumber(phone: string): string {
-    return phone.replace(/\D/g, '');
-}
-
-function findPhoneColumn(headers: string[]): number {
-    const phoneKeywords = ['phone', 'number', 'tel', 'mobile', 'cell', 'contact', 'test'];
-    
-    for (let i = 0; i < headers.length; i++) {
-        const header = headers[i].toLowerCase().replace(/[^a-z]/g, '');
-        if (phoneKeywords.some(kw => header.includes(kw))) {
-            return i;
-        }
-    }
-    return 0;
-}
+interface GroupedPhoneData { [country: string]: { code: string; count: number; nums: string[] } }
 
 export default function PhoneFormatter() {
+    const [inputVal, setInputVal] = useState('');
+    const [outputVal, setOutputVal] = useState('');
+    const [groupedData, setGroupedData] = useState<GroupedPhoneData>({});
+    const [showDashboard, setShowDashboard] = useState(false);
+    const [showOutput, setShowOutput] = useState(false);
+    const [resultCount, setResultCount] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [exportFormat, setExportFormat] = useState('txt');
+    const [colPos, setColPos] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
-    const [processedData, setProcessedData] = useState<ProcessedNumber[]>([]);
-    const [stats, setStats] = useState<{ total: number; valid: number; unique: number } | null>(null);
-    const [columnName, setColumnName] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const processFile = async (file: File) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        
-        if (extension === 'xlsx' || extension === 'xls') {
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
-            
-            if (jsonData.length > 0) {
-                const headers = jsonData[0].map(String);
-                const phoneColIndex = findPhoneColumn(headers);
-                setColumnName(headers[phoneColIndex] || 'Column 1');
-                
-                const phoneNumbers: ProcessedNumber[] = [];
-                
-                for (let i = 1; i < jsonData.length; i++) {
-                    const row = jsonData[i];
-                    if (row[phoneColIndex]) {
-                        const original = String(row[phoneColIndex]);
-                        const cleaned = cleanPhoneNumber(original);
-                        if (cleaned.length >= 8) {
-                            const { country, countryCode } = detectCountry(cleaned);
-                            phoneNumbers.push({
-                                original,
-                                cleaned,
-                                country,
-                                countryCode,
-                                valid: cleaned.length >= 10
-                            });
+    function handleFile(f: File) {
+        if (!f) return;
+        const ext = f.name.split('.').pop()?.toLowerCase();
+        const r = new FileReader();
+
+        if (ext === 'xlsx' || ext === 'xls') {
+            r.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    const allNumbers: string[] = [];
+
+                    wb.SheetNames.forEach(name => {
+                        const sheet = wb.Sheets[name];
+                        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        let numColIdx = -1;
+                        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                            const row = rows[i];
+                            if (!row) continue;
+                            const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
+                            if (idx !== -1) {
+                                numColIdx = idx;
+                                for (let j = i + 1; j < rows.length; j++) {
+                                    const r2 = rows[j];
+                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
+                                }
+                                break;
+                            }
                         }
-                    }
-                }
-                
-                processResults(phoneNumbers);
-            }
-        } else {
-            const text = await file.text();
-            const lines = text.split('\n').filter(l => l.trim());
-            const phoneNumbers: ProcessedNumber[] = [];
-            
-            for (const line of lines) {
-                const cleaned = cleanPhoneNumber(line);
-                if (cleaned.length >= 8) {
-                    const { country, countryCode } = detectCountry(cleaned);
-                    phoneNumbers.push({
-                        original: line.trim(),
-                        cleaned,
-                        country,
-                        countryCode,
-                        valid: cleaned.length >= 10
                     });
-                }
-            }
-            
-            processResults(phoneNumbers);
+
+                    setInputVal(allNumbers.join('\n'));
+                } catch { alert('Error reading Excel'); }
+            };
+            r.readAsArrayBuffer(f);
+        } else {
+            r.onload = (e) => { setInputVal(e.target?.result as string); };
+            r.readAsText(f);
         }
-    };
+    }
 
-    const processResults = (numbers: ProcessedNumber[]) => {
-        const uniqueMap = new Map<string, ProcessedNumber>();
-        numbers.forEach(n => {
-            if (!uniqueMap.has(n.cleaned)) {
-                uniqueMap.set(n.cleaned, n);
+    function processNumbers() {
+        const txt = inputVal.trim();
+        if (!txt) return;
+
+        const processedNums: string[] = [];
+        const grouped: GroupedPhoneData = {};
+
+        txt.split(/\r?\n/).filter(l => l.trim() !== '').forEach(l => {
+            const n = l.replace(/\D/g, '');
+            if (n.length < 3) return;
+            let code = '', country = 'UNKNOWN';
+            for (const c of sortedCountryCodes) {
+                if (n.startsWith(c)) { code = c; country = ivasCountryDict[c]; break; }
             }
+            if (!grouped[country]) grouped[country] = { code, count: 0, nums: [] };
+            grouped[country].count++;
+            grouped[country].nums.push(n);
+            processedNums.push(n);
         });
-        
-        const unique = Array.from(uniqueMap.values());
-        setProcessedData(unique);
-        setStats({
-            total: numbers.length,
-            valid: unique.filter(n => n.valid).length,
-            unique: unique.length
+
+        if (!processedNums.length) { alert('No valid numbers found'); return; }
+        setGroupedData(grouped);
+        setShowDashboard(true);
+        setShowOutput(true);
+        setOutputVal(processedNums.join('\n'));
+        setResultCount(processedNums.length);
+    }
+
+    function updateOutput(checkedCountries: string[]) {
+        let all: string[] = [];
+        checkedCountries.forEach(c => {
+            if (groupedData[c]) all = all.concat(groupedData[c].nums);
         });
-    };
+        setOutputVal(all.join('\n'));
+        setResultCount(all.length);
+    }
 
-    const handleFileUpload = (file: File) => {
-        processFile(file);
-    };
+    function handleCheckboxChange(country: string, checked: boolean) {
+        const allChecked = Object.keys(groupedData).filter(c => {
+            if (c === country) return checked;
+            const el = document.querySelector(`input[data-phone-c="${c}"]`) as HTMLInputElement;
+            return el?.checked ?? false;
+        });
+        updateOutput(allChecked);
+    }
 
-    const downloadCSV = () => {
-        const csv = 'Original,Cleaned,Country,Country Code,Valid\n' + 
-            processedData.map(n => `${n.original},${n.cleaned},${n.country},${n.countryCode},${n.valid}`).join('\n');
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'formatted_numbers.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    function downloadNumbers() {
+        const checkedEls = document.querySelectorAll('input.phone-cb:checked') as NodeListOf<HTMLInputElement>;
+        const selected = Array.from(checkedEls).map(cb => cb.getAttribute('data-phone-c') || '');
+        if (!selected.length) return;
 
-    const downloadExcel = () => {
-        const ws = XLSX.utils.json_to_sheet(processedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Phone Numbers');
-        XLSX.writeFile(wb, 'formatted_numbers.xlsx');
-    };
+        let finalNumbers: string[] = [];
+        selected.forEach(c => { if (groupedData[c]) finalNumbers = finalNumbers.concat(groupedData[c].nums); });
 
-    const resetTool = () => {
-        setProcessedData([]);
-        setStats(null);
-        setColumnName('');
-    };
+        const ts = Date.now();
+        const fn = `Numbers_${finalNumbers.length}_${ts}`;
+
+        if (exportFormat === 'xlsx') {
+            let header: (string)[] = ["Number"];
+            if (colPos === 2) header = ["", "Number"];
+            if (colPos === 3) header = ["", "", "Number"];
+            const rows: (string)[][] = [header];
+            finalNumbers.forEach(n => {
+                let r: string[] = [n];
+                if (colPos === 2) r = ["", n];
+                if (colPos === 3) r = ["", "", n];
+                rows.push(r);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Numbers");
+            XLSX.writeFile(wb, fn + '.xlsx');
+        } else if (exportFormat === 'csv') {
+            let prefix = "";
+            if (colPos === 2) prefix = ",";
+            if (colPos === 3) prefix = ",,";
+            const content = prefix + "Number\n" + finalNumbers.map(n => prefix + n).join('\n');
+            const b = new Blob([content], { type: "text/csv" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fn + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+        } else {
+            let prefix = "";
+            if (colPos === 2) prefix = "\t";
+            if (colPos === 3) prefix = "\t\t";
+            const content = finalNumbers.map(n => prefix + n).join('\n');
+            const b = new Blob([content], { type: "text/plain" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fn + '.txt'; a.click(); URL.revokeObjectURL(a.href);
+        }
+    }
+
+    function resetTool() {
+        setInputVal(''); setOutputVal(''); setShowOutput(false); setShowDashboard(false);
+        setGroupedData({}); setResultCount(0); setSearchQuery('');
+    }
+
+    const filteredCountries = Object.keys(groupedData).sort().filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <div className="space-y-8">
-            {!stats ? (
+        <div className="space-y-6">
+            {/* Input Section */}
+            <div className="space-y-4">
                 <div
-                    className={`glass-panel p-10 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted hover:bg-surface-hover'}`}
+                    className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.length > 0) handleFileUpload(e.dataTransfer.files[0]);
-                    }}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <UploadCloud size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-xl font-medium">Drop Excel or Text File</p>
-                    <p className="text-sm text-text-muted mt-2">Smart column detection for "Test Number" and variations</p>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.length && handleFileUpload(e.target.files[0])}
-                        accept=".xlsx,.xls,.txt,.csv"
-                    />
+                    <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
+                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop File</p>
+                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls — Smart &quot;Number&quot; column detection</p>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv,.xlsx,.xls" />
                 </div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <div className="flex gap-4">
-                            <div className="glass-panel px-6 py-3">
-                                <p className="text-text-muted text-xs uppercase tracking-wider">Source Column</p>
-                                <p className="font-bold">{columnName}</p>
-                            </div>
-                            <div className="glass-panel px-6 py-3">
-                                <p className="text-text-muted text-xs uppercase tracking-wider">Total Found</p>
-                                <p className="font-bold">{stats.total}</p>
-                            </div>
-                            <div className="glass-panel px-6 py-3">
-                                <p className="text-text-muted text-xs uppercase tracking-wider">Valid Numbers</p>
-                                <p className="font-bold text-green-400">{stats.valid}</p>
-                            </div>
-                            <div className="glass-panel px-6 py-3">
-                                <p className="text-text-muted text-xs uppercase tracking-wider">Unique</p>
-                                <p className="font-bold text-brand">{stats.unique}</p>
-                            </div>
+
+                <textarea value={inputVal} onChange={e => setInputVal(e.target.value)} className="input-field h-32 font-mono text-xs resize-none" placeholder={"Paste numbers (one per line)\n8801700000000\n6288801256516"} />
+
+                <div className="flex gap-2 justify-end">
+                    <button onClick={resetTool} className="btn-secondary flex items-center gap-2 text-xs"><Trash2 size={12} /> Reset</button>
+                    <button onClick={processNumbers} className="btn-primary flex items-center gap-2 text-xs">Process & Detect →</button>
+                </div>
+            </div>
+
+            {/* Dashboard (Country Table) */}
+            {showDashboard && (
+                <div className="space-y-4">
+                    <div className="glass-panel p-3 flex items-center gap-3 flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
+                            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="input-field pl-8 text-xs" placeholder="Search countries..." />
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={downloadCSV} className="btn-secondary flex items-center gap-2">
-                                <FileText size={16} /> CSV
-                            </button>
-                            <button onClick={downloadExcel} className="btn-primary flex items-center gap-2">
-                                <Download size={16} /> Excel
-                            </button>
-                            <button onClick={resetTool} className="btn-secondary">
-                                Reset
-                            </button>
-                        </div>
+                        <button onClick={() => { document.querySelectorAll('input.phone-cb').forEach((cb: any) => cb.checked = true); updateOutput(Object.keys(groupedData)); }} className="btn-secondary text-xs py-1.5"><CheckSquare size={12} /></button>
+                        <button onClick={() => { document.querySelectorAll('input.phone-cb').forEach((cb: any) => cb.checked = false); updateOutput([]); }} className="btn-secondary text-xs py-1.5"><Square size={12} /></button>
                     </div>
 
                     <div className="glass-panel overflow-hidden">
-                        <div className="overflow-x-auto max-h-[500px]">
-                            <table className="w-full">
+                        <div className="overflow-x-auto max-h-[300px]">
+                            <table className="w-full text-xs">
                                 <thead className="bg-surface-hover sticky top-0">
                                     <tr>
-                                        <th className="text-left p-4 text-text-muted font-medium">Original</th>
-                                        <th className="text-left p-4 text-text-muted font-medium">Cleaned</th>
-                                        <th className="text-left p-4 text-text-muted font-medium">Country</th>
-                                        <th className="text-left p-4 text-text-muted font-medium">Code</th>
-                                        <th className="text-left p-4 text-text-muted font-medium">Status</th>
+                                        <th className="p-3 w-10"></th>
+                                        <th className="text-left p-3 section-title">Country</th>
+                                        <th className="text-center p-3 section-title">Code</th>
+                                        <th className="text-center p-3 section-title">Count</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {processedData.slice(0, 100).map((row, i) => (
-                                        <tr key={i} className="border-t border-border hover:bg-surface-hover/50">
-                                            <td className="p-4 font-mono text-sm">{row.original}</td>
-                                            <td className="p-4 font-mono text-sm">{row.cleaned}</td>
-                                            <td className="p-4">{row.country}</td>
-                                            <td className="p-4 font-mono text-sm">{row.countryCode}</td>
-                                            <td className="p-4">
-                                                {row.valid ? (
-                                                    <span className="flex items-center gap-1 text-green-400 text-sm">
-                                                        <CheckCircle size={14} /> Valid
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-yellow-400 text-sm">Short</span>
-                                                )}
+                                    {filteredCountries.map(c => (
+                                        <tr key={c} className="border-t border-border hover:bg-surface-hover">
+                                            <td className="p-3 text-center">
+                                                <input type="checkbox" className="phone-cb" data-phone-c={c} defaultChecked onChange={(e) => handleCheckboxChange(c, e.target.checked)} />
                                             </td>
+                                            <td className="p-3 font-medium">{c}</td>
+                                            <td className="p-3 text-center text-text-muted">{groupedData[c].code}</td>
+                                            <td className="p-3 text-center"><span className="badge bg-surface-hover text-brand">{groupedData[c].count}</span></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                        {processedData.length > 100 && (
-                            <div className="p-4 text-center text-text-muted border-t border-border">
-                                Showing first 100 of {processedData.length} numbers
-                            </div>
-                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Output Section */}
+            {showOutput && (
+                <div className="space-y-4">
+                    <div className="glass-panel p-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="section-title">Output — {resultCount} Numbers</h3>
+                            <button onClick={() => navigator.clipboard.writeText(outputVal)} className="btn-secondary text-xs flex items-center gap-1"><Copy size={12} /> Copy</button>
+                        </div>
+                        <textarea readOnly value={outputVal} className="input-field h-40 font-mono text-xs resize-none bg-surface" />
+                    </div>
+
+                    {/* Export Options */}
+                    <div className="glass-panel p-4">
+                        <h3 className="section-title mb-3">Export Options</h3>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <select value={exportFormat} onChange={e => setExportFormat(e.target.value)} className="input-field w-auto text-xs">
+                                <option value="txt">Text (.txt)</option>
+                                <option value="xlsx">Excel (.xlsx)</option>
+                                <option value="csv">CSV (.csv)</option>
+                            </select>
+                            <select value={colPos} onChange={e => setColPos(parseInt(e.target.value))} className="input-field w-auto text-xs">
+                                <option value={1}>Column A</option>
+                                <option value={2}>Column B</option>
+                                <option value={3}>Column C</option>
+                            </select>
+                            <button onClick={downloadNumbers} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download</button>
+                        </div>
                     </div>
                 </div>
             )}
