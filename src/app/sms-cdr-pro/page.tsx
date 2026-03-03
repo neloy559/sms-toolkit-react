@@ -1,22 +1,20 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import SmsCdrPro from '@/components/tools/SmsCdrPro';
 
-const IvasComponent = dynamic(() => import('@/components/tools/IvasFormatter'), { ssr: false });
-
-export default function IvasPage() {
+export default function SmsCdrProPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-hover">
-                    iVAS Formatter
+                    SMS CDR Pro
                 </h1>
                 <p className="text-text-muted">
-                    Premium rate SMS generation and routing parameters formatting.
+                    Advanced analytics for SMS data. Filter by country, CLI, OTP length and visualize trends.
                 </p>
             </div>
             <div className="mt-4">
-                <IvasComponent />
+                <SmsCdrPro />
             </div>
         </div>
     );

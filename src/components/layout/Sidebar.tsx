@@ -1,16 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Home, Filter, PieChart, BarChart2, MessageSquare, Settings } from 'lucide-react';
+import { Home, Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
     { name: 'Dashboard', href: '/', icon: <Home size={20} /> },
-    { name: 'Number Extractor Pro', href: '/extractor', icon: <Filter size={20} /> },
-    { name: 'SMS CDR Pro', href: '/sms-cdr', icon: <PieChart size={20} /> },
-    { name: 'Cookie Dashboard', href: '/cookie', icon: <BarChart2 size={20} /> },
-    { name: 'iVAS Formatter', href: '/ivas', icon: <MessageSquare size={20} /> },
+    { name: 'iVAS Formatter', href: '/ivas-formatter', icon: <Smartphone size={20} /> },
+    { name: 'SMS CDR Pro', href: '/sms-cdr-pro', icon: <MessageSquare size={20} /> },
+    { name: 'Cookie Dashboard', href: '/cookie-dashboard', icon: <Cookie size={20} /> },
+    { name: 'Phone Formatter', href: '/phone-formatter', icon: <Phone size={20} /> },
+    { name: 'Phone Splitter', href: '/phone-splitter', icon: <PhoneForwarded size={20} /> },
+    { name: 'Phone OTP Splitter', href: '/phone-otp-splitter', icon: <Split size={20} /> },
     { name: 'Settings', href: '/settings', icon: <Settings size={20} /> },
 ];
 

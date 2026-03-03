@@ -1,22 +1,20 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import CookieDashboard from '@/components/tools/CookieDashboard';
 
-const SmsCdrComponent = dynamic(() => import('@/components/tools/SmsCdrPro'), { ssr: false });
-
-export default function SmsCdrPage() {
+export default function CookieDashboardPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-hover">
-                    SMS CDR Pro
+                    Cookie Dashboard
                 </h1>
                 <p className="text-text-muted">
-                    Process Phone|OTP combinations, identify counts, and detect top country stats.
+                    Parse pipe-delimited cookie files, filter by ID series (e.g., 1000xxx, 6154xxx), and export to Excel.
                 </p>
             </div>
             <div className="mt-4">
-                <SmsCdrComponent />
+                <CookieDashboard />
             </div>
         </div>
     );
