@@ -270,6 +270,20 @@ export default function SmsCdrPro() {
         });
     }
 
+    function downloadSingleCountry(country: string) {
+        const records = allData.filter(d => d.country === country);
+        if (!records.length) return;
+        
+        const ts = new Date().getDate() + '-' + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
+        const content = records.map(d => `${d.num}|${d.otp}`).join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const a = document.createElement("a"); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `${country.replace(/[^a-zA-Z0-9]/g, '_')}_${records.length}_${ts}.txt`; 
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
     function copyToClipboard() {
         const output = filteredData.map(d => `${d.num}|${d.otp}`).join('\n');
         if (output) navigator.clipboard.writeText(output);
@@ -363,12 +377,24 @@ export default function SmsCdrPro() {
                 {countries.length > 0 && (
                     <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {countries.map(c => (
-                            <button key={c} onClick={() => selectCountry(c)} className={`w-full text-left text-xs px-3 py-2 rounded flex justify-between items-center transition-colors ${selectedCountry === c ? 'bg-brand/20 text-brand border border-brand/30' : 'hover:bg-surface-hover border border-transparent'}`}>
-                                <span>{c}</span>
-                                <span className="text-[10px] font-bold">{countryCounts[c]}</span>
-                            </button>
+                            <div key={c} className={`flex items-center justify-between px-3 py-2 rounded transition-colors ${selectedCountry === c ? 'bg-brand/20 text-brand border border-brand/30' : 'hover:bg-surface-hover border border-transparent'}`}>
+                                <button onClick={() => selectCountry(c)} className="text-left text-xs flex-1">
+                                    <span>{c}</span>
+                                    <span className="text-[10px] font-bold ml-2">{countryCounts[c]}</span>
+                                </button>
+                                <button onClick={() => downloadSingleCountry(c)} className="text-xs text-text-dim hover:text-brand ml-2" title="Download">
+                                    <Download size={12} />
+                                </button>
+                            </div>
                         ))}
                     </div>
+                )}
+
+                {/* Download All Countries */}
+                {countries.length > 1 && (
+                    <button onClick={downloadCountryWise} className="btn-primary w-full text-xs flex items-center justify-center gap-2">
+                        <Download size={12} /> Download All Countries
+                    </button>
                 )}
             </div>
 
@@ -438,15 +464,6 @@ export default function SmsCdrPro() {
                     </div>
                     <textarea readOnly value={outputVal} className="input-field h-64 font-mono text-xs resize-none bg-surface" placeholder="Upload an SMS CDR file to begin..." />
                 </div>
-
-                {/* Download Country Wise */}
-                {allData.length > 0 && (
-                    <div className="glass-panel p-4">
-                        <h3 className="section-title mb-3">Download by Country</h3>
-                        <p className="text-xs text-text-dim mb-3">Each country = separate .txt file: <code className="text-brand">COUNTRY_COUNT_Date-Time.txt</code></p>
-                        <button onClick={downloadCountryWise} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download All Countries</button>
-                    </div>
-                )}
 
                 <button onClick={resetApp} className="btn-secondary text-xs flex items-center gap-2"><Trash2 size={12} /> Reset All</button>
             </div>
