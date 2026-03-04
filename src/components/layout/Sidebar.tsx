@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Home, Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, Settings, ChevronRight } from 'lucide-react';
+import { Home, Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, Settings, ChevronRight, Shield, Hash } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -13,6 +13,8 @@ const navItems = [
     { name: 'PHONE FORMAT', href: '/phone-formatter', icon: <Phone size={16} /> },
     { name: 'PHONE SPLIT', href: '/phone-splitter', icon: <PhoneForwarded size={16} /> },
     { name: 'OTP SPLITTER', href: '/phone-otp-splitter', icon: <Split size={16} /> },
+    { name: 'NUMBER EXTRACT', href: '/number-extractor', icon: <Hash size={16} /> },
+    { name: 'PROXY MGR', href: '/proxy-manager', icon: <Shield size={16} /> },
     { name: 'SETTINGS', href: '/settings', icon: <Settings size={16} /> },
 ];
 

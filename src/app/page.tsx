@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import HeroScene from '@/components/3d/HeroScene';
 import Link from 'next/link';
-import { Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, ArrowUpRight, Globe } from 'lucide-react';
+import { Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, ArrowUpRight, Globe, Hash } from 'lucide-react';
 
 const tools = [
     {
@@ -53,6 +53,13 @@ const tools = [
         description: 'Manage proxies from your panel. Paste JSON array to view countries and easily copy proxy strings.',
         href: '/proxy-manager',
         icon: Globe,
+        status: 'NEW',
+    },
+    {
+        name: 'Number Extractor',
+        description: 'Extract phone numbers from any file format. Smart regex detection and country grouping.',
+        href: '/number-extractor',
+        icon: Hash,
         status: 'NEW',
     },
 ];
