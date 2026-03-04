@@ -2,15 +2,62 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Copy, Check, Globe, Search } from 'lucide-react';
+import { Shield, Copy, Check, Globe, Search, Settings2 } from 'lucide-react';
 import { abcProxies, dataImpulseProxies, type ProxyEntry } from './proxyData';
 
 type Provider = 'abc' | 'dataimpulse';
+
+type ProxyFormat =
+    | 'host:port:login:pass'
+    | 'host:port@login:pass'
+    | 'login:pass@host:port'
+    | 'protocol://login:pass@host:port'
+    | 'login:pass:host:port'
+    | 'host:port';
+
+const FORMATS: { label: string; value: ProxyFormat }[] = [
+    { label: 'hostname:port:login:password', value: 'host:port:login:pass' },
+    { label: 'hostname:port@login:password', value: 'host:port@login:pass' },
+    { label: 'login:password@hostname:port', value: 'login:pass@host:port' },
+    { label: 'protocol://login:password@hostname:port', value: 'protocol://login:pass@host:port' },
+    { label: 'login:password:hostname:port', value: 'login:pass:host:port' },
+    { label: 'hostname:port', value: 'host:port' },
+];
+
+function formatProxy(raw: string, fmt: ProxyFormat): string {
+    // Raw format is host:port:login:password
+    const parts = raw.split(':');
+    if (parts.length < 2) return raw;
+
+    const host = parts[0];
+    const port = parts[1];
+    const login = parts[2] || '';
+    const pass = parts.slice(3).join(':') || '';
+
+    switch (fmt) {
+        case 'host:port:login:pass':
+            return raw; // already in this format
+        case 'host:port@login:pass':
+            return login ? `${host}:${port}@${login}:${pass}` : `${host}:${port}`;
+        case 'login:pass@host:port':
+            return login ? `${login}:${pass}@${host}:${port}` : `${host}:${port}`;
+        case 'protocol://login:pass@host:port':
+            return login ? `http://${login}:${pass}@${host}:${port}` : `http://${host}:${port}`;
+        case 'login:pass:host:port':
+            return login ? `${login}:${pass}:${host}:${port}` : `${host}:${port}`;
+        case 'host:port':
+            return `${host}:${port}`;
+        default:
+            return raw;
+    }
+}
 
 export default function ProxyManager() {
     const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
     const [search, setSearch] = useState('');
+    const [proxyFormat, setProxyFormat] = useState<ProxyFormat>('host:port:login:pass');
+    const [showFormats, setShowFormats] = useState(false);
 
     const currentProxies: ProxyEntry[] = useMemo(() => {
         if (!selectedProvider) return [];
@@ -22,7 +69,8 @@ export default function ProxyManager() {
 
     const handleCopy = async (idx: number, text: string) => {
         try {
-            await navigator.clipboard.writeText(text);
+            const formatted = formatProxy(text, proxyFormat);
+            await navigator.clipboard.writeText(formatted);
             setCopiedIdx(idx);
             setTimeout(() => setCopiedIdx(null), 2000);
         } catch (err) {
@@ -35,6 +83,8 @@ export default function ProxyManager() {
         setSearch('');
         setCopiedIdx(null);
     };
+
+    const currentFormatLabel = FORMATS.find(f => f.value === proxyFormat)?.label || '';
 
     return (
         <div className="min-h-[calc(100vh-4rem)] p-4 md:p-8 lg:p-12 animate-in fade-in duration-500">
@@ -109,7 +159,7 @@ export default function ProxyManager() {
                     transition={{ duration: 0.3 }}
                 >
                     {/* Top Bar: Back + Search */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                         <div className="flex items-center gap-4">
                             <button onClick={handleBack} className="btn-secondary text-xs px-4 py-2">
                                 ← Back
@@ -136,6 +186,39 @@ export default function ProxyManager() {
                         </div>
                     </div>
 
+                    {/* Format Selector */}
+                    <div className="mb-4">
+                        <button
+                            onClick={() => setShowFormats(!showFormats)}
+                            className="flex items-center gap-2 text-xs text-text-dim hover:text-brand transition-colors py-1.5 px-3 rounded-md bg-bg-darker border border-border/30 hover:border-brand/30"
+                        >
+                            <Settings2 size={13} />
+                            <span className="uppercase tracking-wider font-semibold">Format:</span>
+                            <span className="font-mono text-brand">{currentFormatLabel}</span>
+                        </button>
+
+                        {showFormats && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
+                            >
+                                {FORMATS.map((fmt) => (
+                                    <button
+                                        key={fmt.value}
+                                        onClick={() => { setProxyFormat(fmt.value); setShowFormats(false); }}
+                                        className={`text-left px-3 py-2.5 rounded-md text-xs font-mono transition-all duration-200 border ${proxyFormat === fmt.value
+                                                ? 'bg-brand/15 text-brand border-brand/30'
+                                                : 'bg-bg-darker text-text-dim border-border/30 hover:border-brand/20 hover:text-text'
+                                            }`}
+                                    >
+                                        {fmt.label}
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </div>
+
                     {/* Proxy List */}
                     <div className="glass-panel p-5">
                         {currentProxies.length === 0 ? (
@@ -144,48 +227,51 @@ export default function ProxyManager() {
                                 <p className="text-sm">No proxies match your search.</p>
                             </div>
                         ) : (
-                            <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2 custom-scrollbar">
-                                {currentProxies.map((item, i) => (
-                                    <div
-                                        key={`${item.country}-${i}`}
-                                        className="flex items-center justify-between p-3 bg-bg-darker border border-border/30 rounded-md hover:border-brand/30 transition-colors group"
-                                    >
-                                        <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                                            {/* Country Badge */}
-                                            <div className="flex-shrink-0">
-                                                <span className="text-xs font-bold uppercase tracking-wider text-brand bg-brand/10 px-2 py-1 rounded whitespace-nowrap">
-                                                    {item.country}
-                                                </span>
+                            <div className="space-y-2 overflow-y-auto max-h-[55vh] pr-2 custom-scrollbar">
+                                {currentProxies.map((item, i) => {
+                                    const displayed = formatProxy(item.proxy, proxyFormat);
+                                    return (
+                                        <div
+                                            key={`${item.country}-${i}`}
+                                            className="flex items-center justify-between p-3 bg-bg-darker border border-border/30 rounded-md hover:border-brand/30 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                                                {/* Country Badge */}
+                                                <div className="flex-shrink-0">
+                                                    <span className="text-xs font-bold uppercase tracking-wider text-brand bg-brand/10 px-2 py-1 rounded whitespace-nowrap">
+                                                        {item.country}
+                                                    </span>
+                                                </div>
+
+                                                {/* Proxy String (formatted) */}
+                                                <div className="font-mono text-sm text-text truncate">
+                                                    {displayed}
+                                                </div>
                                             </div>
 
-                                            {/* Proxy String */}
-                                            <div className="font-mono text-sm text-text truncate">
-                                                {item.proxy}
-                                            </div>
-                                        </div>
-
-                                        {/* Copy Button */}
-                                        <button
-                                            onClick={() => handleCopy(i, item.proxy)}
-                                            className={`ml-4 flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded transition-all duration-200 ${copiedIdx === i
+                                            {/* Copy Button */}
+                                            <button
+                                                onClick={() => handleCopy(i, item.proxy)}
+                                                className={`ml-4 flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded transition-all duration-200 ${copiedIdx === i
                                                     ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                                     : 'bg-brand/10 text-brand border border-brand/20 hover:bg-brand hover:text-bg-dark'
-                                                }`}
-                                        >
-                                            {copiedIdx === i ? (
-                                                <>
-                                                    <Check size={14} />
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider">Copied</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Copy size={14} />
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider">Copy</span>
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                ))}
+                                                    }`}
+                                            >
+                                                {copiedIdx === i ? (
+                                                    <>
+                                                        <Check size={14} />
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider">Copied</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy size={14} />
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider">Copy</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
