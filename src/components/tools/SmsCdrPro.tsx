@@ -42,91 +42,103 @@ export default function SmsCdrPro() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     function handleFiles(files: FileList) {
-        const f = files[0]; if (!f) return;
+        if (!files || files.length === 0) return;
         resetApp();
         setStatusMsg("Processing...");
         setStatusClass('');
+        
+        const processFile = (file: File): Promise<SmsRecord[]> => {
+            return new Promise((resolve) => {
+                const r = new FileReader();
+                r.onload = function (e) {
+                    try {
+                        const d = new Uint8Array(e.target?.result as ArrayBuffer);
+                        const wb = XLSX.read(d, { type: 'array' });
+                        const s = wb.Sheets[wb.SheetNames[0]];
+                        const rd: any[][] = XLSX.utils.sheet_to_json(s, { header: 1, defval: "" });
 
-        const r = new FileReader();
-        r.onload = function (e) {
-            try {
-                const d = new Uint8Array(e.target?.result as ArrayBuffer);
-                const wb = XLSX.read(d, { type: 'array' });
-                const s = wb.Sheets[wb.SheetNames[0]];
-                const rd: any[][] = XLSX.utils.sheet_to_json(s, { header: 1, defval: "" });
+                        let hi = -1;
+                        for (let i = 0; i < Math.min(rd.length, 25); i++) {
+                            const rw = rd[i]; if (!rw) continue;
+                            const hNames = rw.map((c: any) => String(c).trim().toLowerCase());
+                            const hasNum = hNames.some((h: string) => h.includes("number"));
+                            const hasSms = hNames.some((h: string) => h.includes("sms") || h.includes("message"));
+                            const hasRng = hNames.some((h: string) => h.includes("range") || h.includes("country"));
+                            const hasCli = hNames.some((h: string) => h.includes("cli") || h.includes("sender"));
 
-                let hi = -1;
-                for (let i = 0; i < Math.min(rd.length, 25); i++) {
-                    const rw = rd[i]; if (!rw) continue;
-                    const hNames = rw.map((c: any) => String(c).trim().toLowerCase());
-                    const hasNum = hNames.some((h: string) => h.includes("number"));
-                    const hasSms = hNames.some((h: string) => h.includes("sms") || h.includes("message"));
-                    const hasRng = hNames.some((h: string) => h.includes("range") || h.includes("country"));
-                    const hasCli = hNames.some((h: string) => h.includes("cli") || h.includes("sender"));
+                            if ((hasNum && hasSms) && (hasRng || hasCli)) { hi = i; break; }
+                        }
+                        if (hi === -1) { resolve([]); return; }
 
-                    if ((hasNum && hasSms) && (hasRng || hasCli)) { hi = i; break; }
-                }
-                if (hi === -1) throw new Error("Columns not found. Need 'Number', 'SMS', and 'Range' or 'CLI'.");
+                        const h = rd[hi].map((h: any) => String(h).trim());
+                        const idx = {
+                            num: h.findIndex((x: string) => x.toLowerCase().includes("number")),
+                            rng: h.findIndex((x: string) => x.toLowerCase().includes("range") || x.toLowerCase().includes("country")),
+                            cli: h.findIndex((x: string) => x.toLowerCase().includes("cli") || x.toLowerCase().includes("sender")),
+                            sms: h.findIndex((x: string) => x.toLowerCase().includes("sms") || x.toLowerCase().includes("message"))
+                        };
 
-                const h = rd[hi].map((h: any) => String(h).trim());
-                const idx = {
-                    num: h.findIndex((x: string) => x.toLowerCase().includes("number")),
-                    rng: h.findIndex((x: string) => x.toLowerCase().includes("range") || x.toLowerCase().includes("country")),
-                    cli: h.findIndex((x: string) => x.toLowerCase().includes("cli") || x.toLowerCase().includes("sender")),
-                    sms: h.findIndex((x: string) => x.toLowerCase().includes("sms") || x.toLowerCase().includes("message"))
+                        const newData: SmsRecord[] = [];
+
+                        for (let i = hi + 1; i < rd.length; i++) {
+                            const row = rd[i]; if (!row || row.length === 0) continue;
+                            const n = (row[idx.num] !== undefined) ? String(row[idx.num]).trim() : "";
+                            const rng = (row[idx.rng] !== undefined) ? String(row[idx.rng]).trim() : "";
+                            const cli = (row[idx.cli] !== undefined) ? String(row[idx.cli]).trim() : "";
+                            const sms = (row[idx.sms] !== undefined) ? String(row[idx.sms]).trim() : "";
+                            if (!n) continue;
+
+                            const cty = rng.split(' ')[0] || "Unknown";
+
+                            let otp: string | null = null;
+                            const m = sms.match(/\d+/g);
+                            if (m) { for (const x of m) { if (x.length >= 4 && x.length <= 8) { otp = x; break; } } }
+
+                            if (otp) {
+                                newData.push({ id: i, num: n, otp, country: cty, cli, len: otp.length, orgSms: sms });
+                            }
+                        }
+                        resolve(newData);
+                    } catch { resolve([]); }
                 };
-
-                const newData: SmsRecord[] = [];
-                const cC: Record<string, number> = {};
-                const cL: Record<string, number> = {};
-                let fB = 0;
-
-                for (let i = hi + 1; i < rd.length; i++) {
-                    const row = rd[i]; if (!row || row.length === 0) continue;
-                    const n = (row[idx.num] !== undefined) ? String(row[idx.num]).trim() : "";
-                    const rng = (row[idx.rng] !== undefined) ? String(row[idx.rng]).trim() : "";
-                    const cli = (row[idx.cli] !== undefined) ? String(row[idx.cli]).trim() : "";
-                    const sms = (row[idx.sms] !== undefined) ? String(row[idx.sms]).trim() : "";
-                    if (!n) continue;
-
-                    const cty = rng.split(' ')[0] || "Unknown";
-                    if (!cC[cty]) cC[cty] = 0;
-                    if (!cL[cli]) cL[cli] = 0;
-
-                    let otp: string | null = null;
-                    const m = sms.match(/\d+/g);
-                    if (m) { for (const x of m) { if (x.length >= 4 && x.length <= 8) { otp = x; break; } } }
-
-                    if (otp) {
-                        cC[cty]++; cL[cli]++;
-                        if (cli.toLowerCase() === 'facebook') fB++;
-                        newData.push({ id: i, num: n, otp, country: cty, cli, len: otp.length, orgSms: sms });
-                    }
-                }
-
-                setAllData(newData);
-                setStatTotal(newData.length);
-                setStatFB(fB);
-
-                // Populate countries
-                const sortedCountries = Object.keys(cC).sort((a, b) => cC[b] - cC[a]);
-                setCountries(sortedCountries);
-                setCountryCounts(cC);
-
-                // Populate CLIs
-                setClis(Object.keys(cL).sort());
-
-                // Apply initial filters
-                applyFiltersOnData(newData, 'All', 'All', [5, 6, 8], '', false);
-
-                setStatusMsg(`Success! Loaded ${newData.length} records.`);
-                setStatusClass('success');
-            } catch (err: any) {
-                setStatusMsg("Error: " + err.message);
-                setStatusClass('');
-            }
+                r.readAsArrayBuffer(file);
+            });
         };
-        r.readAsArrayBuffer(f);
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            const allRecords = results.flat();
+            if (allRecords.length === 0) {
+                setStatusMsg("Error: No valid data found in any files.");
+                setStatusClass('');
+                return;
+            }
+            
+            const cC: Record<string, number> = {};
+            const cL: Record<string, number> = {};
+            let fB = 0;
+            
+            allRecords.forEach(d => {
+                if (!cC[d.country]) cC[d.country] = 0;
+                if (!cL[d.cli]) cL[d.cli] = 0;
+                cC[d.country]++;
+                cL[d.cli]++;
+                if (d.cli.toLowerCase() === 'facebook') fB++;
+            });
+            
+            setAllData(allRecords);
+            setStatTotal(allRecords.length);
+            setStatFB(fB);
+            
+            const sortedCountries = Object.keys(cC).sort((a, b) => cC[b] - cC[a]);
+            setCountries(sortedCountries);
+            setCountryCounts(cC);
+            setClis(Object.keys(cL).sort());
+            
+            applyFiltersOnData(allRecords, 'All', 'All', [5, 6, 8], '', false);
+            
+            setStatusMsg(`Success! Loaded ${allRecords.length} records from ${files.length} file(s).`);
+            setStatusClass('success');
+        });
     }
 
     function applyFiltersOnData(data: SmsRecord[], country: string, cli: string, lengths: number[], regex: string, dedupe: boolean) {
@@ -270,8 +282,8 @@ export default function SmsCdrPro() {
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <UploadCloud size={24} className="mx-auto mb-1 text-text-muted" />
-                    <p className="text-[10px] text-text-dim uppercase tracking-wider">Upload SMS CDR (.xlsx)</p>
-                    <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} />
+                    <p className="text-[10px] text-text-dim uppercase tracking-wider">Upload SMS CDR Files (.xlsx)</p>
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} multiple />
                 </div>
 
                 {/* Country filter */}

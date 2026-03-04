@@ -64,68 +64,76 @@ export default function NumberExtractorPro() {
         setTimeout(() => setSuccessMsg(''), 5000);
     };
 
-    const handleFileUpload = (file: File) => {
+    const handleFileUpload = (files: FileList) => {
+        if (!files || files.length === 0) return;
         setError('');
-        const ext = file.name.split('.').pop()?.toLowerCase();
+        
+        const processFile = (file: File): Promise<string[]> => {
+            return new Promise((resolve) => {
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                
+                if (ext === 'xlsx' || ext === 'xls') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                            const wb = XLSX.read(data, { type: 'array' });
+                            const allNumbers: string[] = [];
 
-        if (ext === 'xlsx' || ext === 'xls') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const allNumbers: string[] = [];
+                            wb.SheetNames.forEach(name => {
+                                const sheet = wb.Sheets[name];
+                                // @ts-ignore
+                                const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                    wb.SheetNames.forEach(name => {
-                        const sheet = wb.Sheets[name];
-                        // @ts-ignore
-                        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                                let numColIdx = -1;
+                                for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                                    const row = rows[i];
+                                    if (!row) continue;
 
-                        let numColIdx = -1;
-                        for (let i = 0; i < Math.min(rows.length, 20); i++) {
-                            const row = rows[i];
-                            if (!row) continue;
+                                    const idx = row.findIndex((cell: any) =>
+                                        cell && String(cell).trim().toLowerCase().includes('number')
+                                    );
 
-                            // Smart inclusion search for test number or number columns
-                            const idx = row.findIndex((cell: any) =>
-                                cell && String(cell).trim().toLowerCase().includes('number')
-                            );
-
-                            if (idx !== -1) {
-                                numColIdx = idx;
-                                for (let j = i + 1; j < rows.length; j++) {
-                                    const r = rows[j];
-                                    if (r && r[numColIdx]) {
-                                        const rawStr = String(r[numColIdx]).trim();
-                                        const cleanNum = rawStr.replace(/\D/g, '');
-                                        if (cleanNum.length > 5) allNumbers.push(cleanNum);
+                                    if (idx !== -1) {
+                                        numColIdx = idx;
+                                        for (let j = i + 1; j < rows.length; j++) {
+                                            const r = rows[j];
+                                            if (r && r[numColIdx]) {
+                                                const rawStr = String(r[numColIdx]).trim();
+                                                const cleanNum = rawStr.replace(/\D/g, '');
+                                                if (cleanNum.length > 5) allNumbers.push(cleanNum);
+                                            }
+                                        }
+                                        break;
                                     }
                                 }
-                                break;
-                            }
-                        }
-                    });
-
-                    if (allNumbers.length === 0) {
-                        setError(`Could not detect a valid "Number" column in ${file.name}.`);
-                    } else {
-                        // Deduplicate
-                        processPureNumbers(Array.from(new Set(allNumbers)));
-                    }
-                } catch (err) {
-                    setError('Error reading Excel file structure.');
+                            });
+                            resolve(allNumbers);
+                        } catch { resolve([]); }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target?.result as string;
+                        const pattern = /(?:\+?)[1-9]\d{6,14}/g;
+                        const matches = text.match(pattern) || [];
+                        const pureNumbers = matches.map(n => n.replace(/\D/g, ''));
+                        resolve(pureNumbers);
+                    };
+                    reader.readAsText(file);
                 }
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            // Text or CSV handling
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result as string;
-                processTextData(text);
-            };
-            reader.readAsText(file);
-        }
+            });
+        };
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            const allNumbers = Array.from(new Set(results.flat()));
+            if (allNumbers.length === 0) {
+                setError('No valid phone numbers found in any of the uploaded files.');
+            } else {
+                processPureNumbers(allNumbers);
+            }
+        });
     };
 
     const copyToClipboard = (text: string) => {
@@ -158,21 +166,22 @@ export default function NumberExtractorPro() {
                     e.preventDefault();
                     setIsDragging(false);
                     const droppedFiles = e.dataTransfer.files;
-                    if (droppedFiles?.length > 0) handleFileUpload(droppedFiles[0]);
+                    if (droppedFiles?.length > 0) handleFileUpload(droppedFiles);
                 }}
                 onClick={() => fileInputRef.current?.click()}
             >
                 <UploadCloud size={48} className={`mb-4 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                <p className="text-xl font-medium">Drag & Drop Any File</p>
-                <p className="text-sm text-text-muted mt-2">Supports .xlsx, .xls, .csv, .txt, .log</p>
+                <p className="text-xl font-medium">Drag & Drop Multiple Files</p>
+                <p className="text-sm text-text-muted mt-2">Supports .xlsx, .xls, .csv, .txt, .log — Multiple files allowed</p>
                 <input
                     type="file"
                     ref={fileInputRef}
                     className="hidden"
                     onChange={(e) => {
-                        if (e.target.files?.length) handleFileUpload(e.target.files[0]);
+                        if (e.target.files?.length) handleFileUpload(e.target.files);
                     }}
                     accept=".txt,.csv,.log,.xlsx,.xls"
+                    multiple
                 />
             </div>
 

@@ -28,14 +28,24 @@ export default function PhoneOtpSplitter() {
         return { code: 'unknown', name: 'Unknown', flag: '❓' };
     }
 
-    function handleFile(file: File) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target?.result as string;
-            setInputVal(content);
-            processFromText(content);
+    function handleFiles(files: FileList) {
+        if (!files || files.length === 0) return;
+        
+        const processFile = (file: File): Promise<string> => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resolve(e.target?.result as string || '');
+                };
+                reader.readAsText(file);
+            });
         };
-        reader.readAsText(file);
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            const combinedContent = results.join('\n');
+            setInputVal(combinedContent);
+            processFromText(combinedContent);
+        });
     }
 
     function processFromText(text?: string) {
@@ -148,13 +158,13 @@ export default function PhoneOtpSplitter() {
                 className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
                 onClick={() => fileInputRef.current?.click()}
             >
                 <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                <p className="text-sm font-semibold uppercase tracking-wider">Upload Phone|OTP File</p>
-                <p className="text-xs text-text-dim mt-1">.txt format (phone|OTP per line)</p>
-                <input type="file" ref={fileInputRef} className="hidden" accept=".txt" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} />
+                <p className="text-sm font-semibold uppercase tracking-wider">Upload Phone|OTP Files</p>
+                <p className="text-xs text-text-dim mt-1">.txt format (phone|OTP per line) — Multiple files supported</p>
+                <input type="file" ref={fileInputRef} className="hidden" accept=".txt" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} multiple />
             </div>
 
             <textarea

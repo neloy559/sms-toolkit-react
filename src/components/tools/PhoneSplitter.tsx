@@ -16,77 +16,85 @@ export default function PhoneSplitter() {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    function handleFile(f: File) {
-        if (!f) return;
-        const ext = f.name.split('.').pop()?.toLowerCase();
-        const r = new FileReader();
+    function handleFiles(files: FileList) {
+        if (!files || files.length === 0) return;
+        let allNumbers: string[] = [];
+        
+        const processFile = (file: File): Promise<string[]> => {
+            return new Promise((resolve) => {
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                const r = new FileReader();
+                
+                if (ext === 'xlsx' || ext === 'xls') {
+                    r.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                            const wb = XLSX.read(data, { type: 'array' });
+                            const numbers: string[] = [];
 
-        if (ext === 'xlsx' || ext === 'xls') {
-            r.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const allNumbers: string[] = [];
+                            wb.SheetNames.forEach(name => {
+                                const sheet = wb.Sheets[name];
+                                const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                                if (rows.length < 2) return;
+                                const headerRow = rows[0];
+                                let numColIdx = -1;
 
-                    wb.SheetNames.forEach(name => {
-                        const sheet = wb.Sheets[name];
-                        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        if (rows.length < 2) return;
-                        const headerRow = rows[0];
-                        let numColIdx = -1;
-
-                        // Try to find "number" column
-                        for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                            const row = rows[i];
-                            if (!row) continue;
-                            const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
-                            if (idx !== -1) {
-                                numColIdx = idx;
-                                for (let j = i + 1; j < rows.length; j++) {
-                                    const r2 = rows[j];
-                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
-                                }
-                                break;
-                            }
-                        }
-
-                        // Fallback: auto-detect column with phone-like numbers
-                        if (numColIdx === -1 && headerRow) {
-                            const colScores: Record<number, number> = {};
-                            for (let c = 0; c < headerRow.length; c++) colScores[c] = 0;
-                            for (let rowIdx = 1; rowIdx < Math.min(rows.length, 50); rowIdx++) {
-                                const row = rows[rowIdx];
-                                if (!row) continue;
-                                for (let c = 0; c < headerRow.length; c++) {
-                                    const val = row[c];
-                                    if (val) {
-                                        const strVal = String(val).replace(/\D/g, '');
-                                        if (strVal.length >= 6 && strVal.length <= 15) colScores[c]++;
+                                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                                    const row = rows[i];
+                                    if (!row) continue;
+                                    const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
+                                    if (idx !== -1) {
+                                        numColIdx = idx;
+                                        for (let j = i + 1; j < rows.length; j++) {
+                                            const r2 = rows[j];
+                                            if (r2 && r2[numColIdx]) numbers.push(String(r2[numColIdx]).trim());
+                                        }
+                                        break;
                                     }
                                 }
-                            }
-                            let maxScore = 0;
-                            for (const c in colScores) {
-                                if (colScores[c] > maxScore) { maxScore = colScores[c]; numColIdx = parseInt(c); }
-                            }
-                            if (numColIdx !== -1 && maxScore > 0) {
-                                for (let j = 1; j < rows.length; j++) {
-                                    const r2 = rows[j];
-                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
-                                }
-                            }
-                        }
-                    });
 
-                    if (allNumbers.length === 0) alert('No phone numbers found in file');
-                    else setInputVal(allNumbers.join('\n'));
-                } catch { alert('Error reading Excel file'); }
-            };
-            r.readAsArrayBuffer(f);
-        } else {
-            r.onload = (e) => { setInputVal(e.target?.result as string); };
-            r.readAsText(f);
-        }
+                                if (numColIdx === -1 && headerRow) {
+                                    const colScores: Record<number, number> = {};
+                                    for (let c = 0; c < headerRow.length; c++) colScores[c] = 0;
+                                    for (let rowIdx = 1; rowIdx < Math.min(rows.length, 50); rowIdx++) {
+                                        const row = rows[rowIdx];
+                                        if (!row) continue;
+                                        for (let c = 0; c < headerRow.length; c++) {
+                                            const val = row[c];
+                                            if (val) {
+                                                const strVal = String(val).replace(/\D/g, '');
+                                                if (strVal.length >= 6 && strVal.length <= 15) colScores[c]++;
+                                            }
+                                        }
+                                    }
+                                    let maxScore = 0;
+                                    for (const c in colScores) {
+                                        if (colScores[c] > maxScore) { maxScore = colScores[c]; numColIdx = parseInt(c); }
+                                    }
+                                    if (numColIdx !== -1 && maxScore > 0) {
+                                        for (let j = 1; j < rows.length; j++) {
+                                            const r2 = rows[j];
+                                            if (r2 && r2[numColIdx]) numbers.push(String(r2[numColIdx]).trim());
+                                        }
+                                    }
+                                }
+                            });
+                            resolve(numbers);
+                        } catch { resolve([]); }
+                    };
+                    r.readAsArrayBuffer(file);
+                } else {
+                    r.onload = (e) => { resolve((e.target?.result as string || '').split(/\r?\n/)); };
+                    r.readAsText(file);
+                }
+            });
+        };
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            allNumbers = results.flat();
+            if (allNumbers.length === 0) alert('No phone numbers found in files');
+            else setInputVal(allNumbers.join('\n'));
+        });
     }
 
     function processNumbers() {
@@ -157,13 +165,13 @@ export default function PhoneSplitter() {
                     className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop File</p>
-                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls</p>
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv,.xlsx,.xls" />
+                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop Files</p>
+                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls — Multiple files supported</p>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} accept=".txt,.csv,.xlsx,.xls" multiple />
                 </div>
 
                 <textarea value={inputVal} onChange={e => setInputVal(e.target.value)} className="input-field h-32 font-mono text-xs resize-none" placeholder={"Paste phone numbers (one per line)\n6288801256516\n2609555123456\n249123456789"} />

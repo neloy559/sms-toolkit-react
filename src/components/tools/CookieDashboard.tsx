@@ -16,12 +16,23 @@ export default function CookieDashboard() {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    function handleFile(file: File) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            processContent(e.target?.result as string);
+    function handleFiles(files: FileList) {
+        if (!files || files.length === 0) return;
+        
+        const processFile = (file: File): Promise<string> => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resolve(e.target?.result as string || '');
+                };
+                reader.readAsText(file);
+            });
         };
-        reader.readAsText(file);
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            const combinedContent = results.join('\n');
+            processContent(combinedContent);
+        });
     }
 
     function processContent(content: string) {
@@ -111,13 +122,13 @@ export default function CookieDashboard() {
                 className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
                 onClick={() => fileInputRef.current?.click()}
             >
                 <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                <p className="text-sm font-semibold uppercase tracking-wider">Upload Cookie File</p>
-                <p className="text-xs text-text-dim mt-1">Format: UserID|Password|Cookie (pipe-delimited .txt)</p>
-                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv" />
+                <p className="text-sm font-semibold uppercase tracking-wider">Upload Cookie Files</p>
+                <p className="text-xs text-text-dim mt-1">Format: UserID|Password|Cookie — Multiple files supported</p>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} accept=".txt,.csv" multiple />
             </div>
 
             {showDashboard && (

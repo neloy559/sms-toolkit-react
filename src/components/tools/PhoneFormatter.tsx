@@ -20,45 +20,53 @@ export default function PhoneFormatter() {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    function handleFile(f: File) {
-        if (!f) return;
-        const ext = f.name.split('.').pop()?.toLowerCase();
-        const r = new FileReader();
+    function handleFiles(files: FileList) {
+        if (!files || files.length === 0) return;
+        let allNumbers: string[] = [];
+        
+        const processFile = (file: File): Promise<string[]> => {
+            return new Promise((resolve) => {
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                const r = new FileReader();
+                
+                if (ext === 'xlsx' || ext === 'xls') {
+                    r.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                            const wb = XLSX.read(data, { type: 'array' });
+                            const numbers: string[] = [];
 
-        if (ext === 'xlsx' || ext === 'xls') {
-            r.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const allNumbers: string[] = [];
-
-                    wb.SheetNames.forEach(name => {
-                        const sheet = wb.Sheets[name];
-                        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        let numColIdx = -1;
-                        for (let i = 0; i < Math.min(rows.length, 20); i++) {
-                            const row = rows[i];
-                            if (!row) continue;
-                            const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
-                            if (idx !== -1) {
-                                numColIdx = idx;
-                                for (let j = i + 1; j < rows.length; j++) {
-                                    const r2 = rows[j];
-                                    if (r2 && r2[numColIdx]) allNumbers.push(String(r2[numColIdx]).trim());
+                            wb.SheetNames.forEach(name => {
+                                const sheet = wb.Sheets[name];
+                                const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                                for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                                    const row = rows[i];
+                                    if (!row) continue;
+                                    const idx = row.findIndex((cell: any) => cell && String(cell).trim().toLowerCase().includes('number'));
+                                    if (idx !== -1) {
+                                        for (let j = i + 1; j < rows.length; j++) {
+                                            const r2 = rows[j];
+                                            if (r2 && r2[idx]) numbers.push(String(r2[idx]).trim());
+                                        }
+                                        break;
+                                    }
                                 }
-                                break;
-                            }
-                        }
-                    });
-
-                    setInputVal(allNumbers.join('\n'));
-                } catch { alert('Error reading Excel'); }
-            };
-            r.readAsArrayBuffer(f);
-        } else {
-            r.onload = (e) => { setInputVal(e.target?.result as string); };
-            r.readAsText(f);
-        }
+                            });
+                            resolve(numbers);
+                        } catch { resolve([]); }
+                    };
+                    r.readAsArrayBuffer(file);
+                } else {
+                    r.onload = (e) => { resolve((e.target?.result as string || '').split(/\r?\n/)); };
+                    r.readAsText(file);
+                }
+            });
+        };
+        
+        Promise.all(Array.from(files).map(processFile)).then(results => {
+            allNumbers = results.flat();
+            setInputVal(allNumbers.join('\n'));
+        });
     }
 
     function processNumbers() {
@@ -165,13 +173,13 @@ export default function PhoneFormatter() {
                     className={`glass-panel p-8 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${isDragging ? 'border-brand bg-brand-dim' : 'border-border hover:border-border-hover'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]); }}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <UploadCloud size={36} className={`mb-3 ${isDragging ? 'text-brand' : 'text-text-muted'}`} />
-                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop File</p>
-                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls — Smart &quot;Number&quot; column detection</p>
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFile(e.target.files[0])} accept=".txt,.csv,.xlsx,.xls" />
+                    <p className="text-sm font-semibold uppercase tracking-wider">Click or Drop Files</p>
+                    <p className="text-xs text-text-dim mt-1">.txt, .csv, .xlsx, .xls — Multiple files supported</p>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.length && handleFiles(e.target.files)} accept=".txt,.csv,.xlsx,.xls" multiple />
                 </div>
 
                 <textarea value={inputVal} onChange={e => setInputVal(e.target.value)} className="input-field h-32 font-mono text-xs resize-none" placeholder={"Paste numbers (one per line)\n8801700000000\n6288801256516"} />
