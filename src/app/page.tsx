@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import HeroScene from '@/components/3d/HeroScene';
 import Link from 'next/link';
-import { Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, ArrowUpRight } from 'lucide-react';
+import { Smartphone, MessageSquare, Cookie, Phone, PhoneForwarded, Split, ArrowUpRight, Globe } from 'lucide-react';
 
 const tools = [
     {
@@ -47,6 +47,13 @@ const tools = [
         href: '/phone-otp-splitter',
         icon: Split,
         status: 'LIVE',
+    },
+    {
+        name: 'Proxy Manager',
+        description: 'Manage proxies from your panel. Paste JSON array to view countries and easily copy proxy strings.',
+        href: '/proxy-manager',
+        icon: Globe,
+        status: 'NEW',
     },
 ];
 

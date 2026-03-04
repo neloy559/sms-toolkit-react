@@ -1,0 +1,130 @@
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ASIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ZW:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "EUROPE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-EUF:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NORTH AMERICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NAF:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SOUTH AMERICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SAF:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "AFRICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AFF:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ALBANIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AL:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ALGERIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-DZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ANGOLA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ARGENTINA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ARMENIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AM:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "AUSTRALIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AU:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "AUSTRIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "AZERBAIJAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BAHRAIN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BELARUS ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BELGIUM ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BENIN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BJ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BIH ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BOLIVIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BOTSWANA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BW:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BRAZIL ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BRITAIN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GB:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BRUNEI ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BULGARIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "BURKINA FASO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BF:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "CAMBODIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-KH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "CANADA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "CHILE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CL:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "COLUMBIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "COSTA RICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "COTE D'IVOIRE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CI:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "CROATIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-HR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "DENMARK ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-DK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "DOMINICAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-DO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ECUADOR ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-EC:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "EGYPT ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-EG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "EL SALVADOR ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SV:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ETHIOPIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ET:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "FINLAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-FI:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "FRANCE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-FR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GABON ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GEORGIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GERMANY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-DE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GHANA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GREECE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GUATEMALA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "GUYANA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-GY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "HONDURAS ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-HN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "HONG KONG CHINA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-HK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "HUNGARY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-HU:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "INDIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-IN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "INDONESIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ID:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "IRAQ ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-IQ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "IRELAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-IE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ISRAEL ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-IL:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ITALY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-IT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "JAMAICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-JM:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "JAPAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-JP:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "JORDAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-JO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "KAZAKHASTAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-KZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "KENYA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-KE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "KUWAIT ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-KW:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "LAOS ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "LATVIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LV:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "LEBANON ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LB:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "LIBYA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "LITHUANIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MACEDONIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MADAGASCAR ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MALAYSIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MALDIVES ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MV:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MALI ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ML:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MEXICO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MX:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MOLDOVA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MD:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MONGOLIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MONTENEGRO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ME:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MOROCCO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MOZAMBIQUE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "MYANMAR ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-MM:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NEPAL ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NP:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NETHERLANDS ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NL:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NEW ZEALAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NIGERIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "NORWAY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-NO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "OMAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-OM:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PAKISTAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PALESTINE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PS:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PANAMA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PARAGUAY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PERU ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "POLAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PL:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PORTUGAL ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "PUERTO RICO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "QATAR ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-QA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "REUNION ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-RE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ROMANIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-RO:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "RUSSIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-RU:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "RWANDA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-RW:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SAUDI ARABIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SENEGAL ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SERBIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-RS:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SINGAPORE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SLOVAKIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SOUTH AFRICA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ZA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SPAIN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ES:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SRI LANKA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-LK:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SWEDEN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SWITZERLAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "SYRIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-SY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TAIWAN CHINA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TW:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TAJIKISTAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TJ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THAILAND ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THE CZECH REPUBLIC ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-CZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THE PEOPLE'S REPUBLIC OF BANGLADESH ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-BD:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THE PHILIPPINES ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-PH:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THE REPUBLIC OF KOREA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-KR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "THE UNITED ARAB EMIRATES ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-AE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TOGO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TRINIDAD AND TOBAGO ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TT:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TUNISIA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "TURKEY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-TR:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "U.S.A ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-US:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "UGANDA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-UG:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "UKRAINE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-UA:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "URUGUAY ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-UY:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "UZBEKISTAN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-UZ:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "VENEZUELA ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-VE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "VIETNAM ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-VN:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "YEMEN ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-YE:otpManual"}
+/set_proxy {"RANDOM": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc:otpManual", "ZIMBABWE ": "na.96278f10b7803b24.abcproxy.vip:4950:otpManual-zone-abc-region-ZW:otpManual"}
