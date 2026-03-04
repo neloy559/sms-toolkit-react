@@ -38,10 +38,18 @@ function GridParticles() {
     const count = 80;
     const positions = useMemo(() => {
         const pos = new Float32Array(count * 3);
+        const random = () => {
+            let state = 123456789;
+            return () => {
+                state = (state * 1103515245 + 12345) & 0x7fffffff;
+                return (state / 0x7fffffff) - 0.5;
+            };
+        };
+        const rand = random();
         for (let i = 0; i < count; i++) {
-            pos[i * 3] = (Math.random() - 0.5) * 20;
-            pos[i * 3 + 1] = (Math.random() - 0.5) * 12;
-            pos[i * 3 + 2] = (Math.random() - 0.5) * 10;
+            pos[i * 3] = rand() * 20;
+            pos[i * 3 + 1] = rand() * 12;
+            pos[i * 3 + 2] = rand() * 10;
         }
         return pos;
     }, []);

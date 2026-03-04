@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Terminal, Copy, Download, Trash2, UploadCloud, Search, Eye, CheckSquare, Square } from 'lucide-react';
+import { Terminal, Copy, Download, Trash2, UploadCloud, Search, CheckSquare, Square } from 'lucide-react';
 import { ivasCountryDict, sortedCountryCodes } from '@/lib/countryDict';
 import * as XLSX from 'xlsx';
 

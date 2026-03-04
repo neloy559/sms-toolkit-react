@@ -10,7 +10,7 @@ export default function PhoneFormatterPage() {
                     Phone Formatter
                 </h1>
                 <p className="text-text-muted">
-                    Extract clean phone numbers from Excel/TXT files with smart column detection. Supports "Test Number" and other variations.
+                    Extract clean phone numbers from Excel/TXT files with smart column detection. Supports Test Number and other variations.
                 </p>
             </div>
             <div className="mt-4">

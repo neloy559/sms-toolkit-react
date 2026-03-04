@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { UploadCloud, CheckCircle, Download, Copy, AlertCircle } from 'lucide-react';
 
@@ -25,15 +25,6 @@ export default function NumberExtractorPro() {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const processTextData = (text: string) => {
-        // Regex matches global format considering optional '+' and capturing the digits
-        const pattern = /(?:\+?)[1-9]\d{6,14}/g;
-        const matches = text.match(pattern) || [];
-        // Clean to strict digits
-        const pureNumbers = matches.map(n => n.replace(/\D/g, ''));
-        processPureNumbers(Array.from(new Set(pureNumbers)));
-    };
 
     const processPureNumbers = (numbers: string[]) => {
         setExtractedNumbers(numbers);
