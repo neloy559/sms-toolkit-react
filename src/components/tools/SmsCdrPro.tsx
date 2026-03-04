@@ -239,6 +239,37 @@ export default function SmsCdrPro() {
         XLSX.writeFile(wb, "sms_export.xlsx");
     }
 
+    function downloadTXT() {
+        if (!filteredData.length) return;
+        const content = filteredData.map(d => `${d.num}|${d.otp}`).join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "sms_export.txt"; a.click();
+    }
+
+    function downloadCountryWise() {
+        if (!allData.length) return;
+        
+        const countryGroups: Record<string, SmsRecord[]> = {};
+        allData.forEach(d => {
+            if (!countryGroups[d.country]) countryGroups[d.country] = [];
+            countryGroups[d.country].push(d);
+        });
+        
+        const ts = new Date().getDate() + '-' + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
+        
+        Object.entries(countryGroups).forEach(([country, records], idx) => {
+            setTimeout(() => {
+                const content = records.map(d => `${d.num}|${d.otp}`).join('\n');
+                const blob = new Blob([content], { type: 'text/plain' });
+                const a = document.createElement("a"); 
+                a.href = URL.createObjectURL(blob); 
+                a.download = `${country.replace(/[^a-zA-Z0-9]/g, '_')}_${records.length}_${ts}.txt`; 
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }, idx * 200);
+        });
+    }
+
     function copyToClipboard() {
         const output = filteredData.map(d => `${d.num}|${d.otp}`).join('\n');
         if (output) navigator.clipboard.writeText(output);
@@ -400,12 +431,22 @@ export default function SmsCdrPro() {
                         <h3 className="section-title">Output (Number|OTP)</h3>
                         <div className="flex gap-2">
                             <button onClick={copyToClipboard} className="btn-secondary text-xs flex items-center gap-1"><Copy size={12} /> Copy</button>
+                            <button onClick={downloadTXT} className="btn-secondary text-xs flex items-center gap-1"><Download size={12} /> TXT</button>
                             <button onClick={downloadCSV} className="btn-secondary text-xs flex items-center gap-1"><Download size={12} /> CSV</button>
                             <button onClick={downloadExcel} className="btn-primary text-xs flex items-center gap-1"><Download size={12} /> Excel</button>
                         </div>
                     </div>
                     <textarea readOnly value={outputVal} className="input-field h-64 font-mono text-xs resize-none bg-surface" placeholder="Upload an SMS CDR file to begin..." />
                 </div>
+
+                {/* Download Country Wise */}
+                {allData.length > 0 && (
+                    <div className="glass-panel p-4">
+                        <h3 className="section-title mb-3">Download by Country</h3>
+                        <p className="text-xs text-text-dim mb-3">Each country = separate .txt file: <code className="text-brand">COUNTRY_COUNT_Date-Time.txt</code></p>
+                        <button onClick={downloadCountryWise} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download All Countries</button>
+                    </div>
+                )}
 
                 <button onClick={resetApp} className="btn-secondary text-xs flex items-center gap-2"><Trash2 size={12} /> Reset All</button>
             </div>
