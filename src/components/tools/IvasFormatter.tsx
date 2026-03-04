@@ -132,6 +132,37 @@ export default function IvasFormatter() {
         });
     }
 
+    function downloadSingleCountry(country: string) {
+        const g = groupedData[country];
+        if (!g || !g.nums.length) return;
+        
+        const ts = new Date().getDate() + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
+        const fn = `${country.replace(/[^a-zA-Z0-9]/g, "_")}_${g.count >= 1000 ? (g.count / 1000).toFixed(1) + 'k' : g.count}_${ts}`;
+        
+        const rows: (string | number)[][] = [["HEAD", "iVAS Premium rate SMS My Numbers", "*", "*", "*", "*"], ["0", "Range", "Number", "A2P", "P2P"]];
+        let idx = 1;
+        g.nums.forEach(n => rows.push([idx++, `${n.code} ${country}`, n.num, "$0.00", ""]));
+        
+        if (exportFormat === 'xlsx') {
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, fn + '.xlsx');
+        } else if (exportFormat === 'csv') {
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, fn + '.csv', { bookType: 'csv' });
+        } else {
+            const b = new Blob([rows.map(r => r.join(" | ")).join("\n")], { type: "text/plain" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(b);
+            a.download = fn + '.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+    }
+
     function copyAllSelected() {
         if (selectedCountries.size === 0) return;
         let combined = "";
@@ -213,6 +244,7 @@ export default function IvasFormatter() {
                                         <th className="text-left p-3 section-title">Country</th>
                                         <th className="text-left p-3 section-title">Code</th>
                                         <th className="text-left p-3 section-title">Count</th>
+                                        <th className="p-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -224,6 +256,11 @@ export default function IvasFormatter() {
                                             <td className="p-3 font-medium">{c}</td>
                                             <td className="p-3 text-text-muted">{groupedData[c].code}</td>
                                             <td className="p-3"><span className="badge bg-surface-hover text-brand">{groupedData[c].count}</span></td>
+                                            <td className="p-3" onClick={e => e.stopPropagation()}>
+                                                <button onClick={() => downloadSingleCountry(c)} className="text-xs text-text-dim hover:text-brand" title="Download">
+                                                    <Download size={12} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

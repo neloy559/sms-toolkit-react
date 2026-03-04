@@ -141,6 +141,22 @@ export default function PhoneSplitter() {
         });
     }
 
+    function downloadSingleCountry(country: string) {
+        const g = groupedData[country];
+        if (!g || !g.nums.length) return;
+        
+        const now = new Date();
+        const ts = now.getDate() + '-' + now.toLocaleString('default', { month: 'short' }) + '_' + now.toTimeString().slice(0, 5).replace(':', '');
+        const fn = `${country.replace(/[^a-zA-Z0-9]/g, '_')}_${g.nums.length}_${ts}`;
+        const content = g.nums.join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fn + '.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
     function downloadSelected() {
         const cbs = document.querySelectorAll('input.ps-cb:checked') as NodeListOf<HTMLInputElement>;
         const countries = Array.from(cbs).map(cb => cb.getAttribute('data-ps-c') || '');
@@ -202,6 +218,7 @@ export default function PhoneSplitter() {
                                         <th className="text-left p-3 section-title">Country</th>
                                         <th className="text-left p-3 section-title">Code</th>
                                         <th className="text-left p-3 section-title">Count</th>
+                                        <th className="p-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -211,6 +228,11 @@ export default function PhoneSplitter() {
                                             <td className="p-3 font-medium">{c}</td>
                                             <td className="p-3 text-text-muted">{groupedData[c].code}</td>
                                             <td className="p-3"><span className="badge bg-surface-hover text-brand">{groupedData[c].count}</span></td>
+                                            <td className="p-3">
+                                                <button onClick={() => downloadSingleCountry(c)} className="text-xs text-text-dim hover:text-brand" title="Download">
+                                                    <Download size={12} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

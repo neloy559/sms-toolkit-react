@@ -158,6 +158,31 @@ export default function PhoneFormatter() {
         }
     }
 
+    function downloadSingleCountry(country: string) {
+        const data = groupedData[country];
+        if (!data || !data.nums.length) return;
+        
+        const ts = new Date().getDate() + '-' + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
+        const fn = `${country.replace(/[^a-zA-Z0-9]/g, '_')}_${data.nums.length}_${ts}`;
+        
+        if (exportFormat === 'xlsx') {
+            const rows: (string)[][] = [["Number"]];
+            data.nums.forEach(n => rows.push([n]));
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, country.substring(0, 30));
+            XLSX.writeFile(wb, fn + '.xlsx');
+        } else if (exportFormat === 'csv') {
+            const content = "Number\n" + data.nums.join('\n');
+            const b = new Blob([content], { type: "text/csv" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fn + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+        } else {
+            const content = data.nums.join('\n');
+            const b = new Blob([content], { type: "text/plain" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fn + '.txt'; a.click(); URL.revokeObjectURL(a.href);
+        }
+    }
+
     function resetTool() {
         setInputVal(''); setOutputVal(''); setShowOutput(false); setShowDashboard(false);
         setGroupedData({}); setResultCount(0); setSearchQuery('');
@@ -211,6 +236,7 @@ export default function PhoneFormatter() {
                                         <th className="text-left p-3 section-title">Country</th>
                                         <th className="text-center p-3 section-title">Code</th>
                                         <th className="text-center p-3 section-title">Count</th>
+                                        <th className="p-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -222,6 +248,11 @@ export default function PhoneFormatter() {
                                             <td className="p-3 font-medium">{c}</td>
                                             <td className="p-3 text-center text-text-muted">{groupedData[c].code}</td>
                                             <td className="p-3 text-center"><span className="badge bg-surface-hover text-brand">{groupedData[c].count}</span></td>
+                                            <td className="p-3">
+                                                <button onClick={() => downloadSingleCountry(c)} className="text-xs text-text-dim hover:text-brand" title="Download">
+                                                    <Download size={12} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
