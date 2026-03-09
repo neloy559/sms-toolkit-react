@@ -23,12 +23,12 @@ export default function IvasFormatter() {
     function handleFiles(files: FileList) {
         if (!files || files.length === 0) return;
         let allNumbers: string[] = [];
-        
+
         const processFile = (file: File): Promise<string[]> => {
             return new Promise((resolve) => {
                 const ext = file.name.split('.').pop()?.toLowerCase();
                 const r = new FileReader();
-                
+
                 if (ext === 'xlsx' || ext === 'xls') {
                     r.onload = (e) => {
                         try {
@@ -62,7 +62,7 @@ export default function IvasFormatter() {
                 }
             });
         };
-        
+
         Promise.all(Array.from(files).map(processFile)).then(results => {
             allNumbers = results.flat();
             if (allNumbers.length === 0) alert('No "Number" column found or it is empty');
@@ -102,9 +102,18 @@ export default function IvasFormatter() {
         selectedCountries.forEach(c => {
             const g = groupedData[c];
             if (!g) return;
-            const rows: (string | number)[][] = [["HEAD", "iVAS Premium rate SMS My Numbers", "*", "*", "*", "*"], ["0", "Range", "Number", "A2P", "P2P"]];
-            let idx = 1;
-            g.nums.forEach(n => rows.push([idx++, `${n.code} ${c}`, n.num, "$0.00", ""]));
+
+            // Layout: Row 1 & 2 blank, Column A blank
+            // B3 = "Country Name", C3 = "Numbers"
+            // B4+ = "Country Prefix" (e.g. IVORY COAST 225), C4+ = "Number"
+            const rows: (string | number)[][] = [
+                ["", "", ""], // Row 1
+                ["", "", ""], // Row 2
+                ["", "Country Name", "Numbers"] // Row 3 (A3="", B3="Country Name", C3="Numbers")
+            ];
+
+            g.nums.forEach(n => rows.push(["", `${n.country} ${n.code}`.toUpperCase(), n.num]));
+
             const ts = new Date().getDate() + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
             const fn = `${c.replace(/[^a-zA-Z0-9]/g, "_")}_${g.count >= 1000 ? (g.count / 1000).toFixed(1) + 'k' : g.count}_${ts}`;
 
@@ -135,14 +144,18 @@ export default function IvasFormatter() {
     function downloadSingleCountry(country: string) {
         const g = groupedData[country];
         if (!g || !g.nums.length) return;
-        
+
         const ts = new Date().getDate() + new Date().toLocaleString('default', { month: 'short' }) + '_' + new Date().toTimeString().slice(0, 5).replace(':', '');
         const fn = `${country.replace(/[^a-zA-Z0-9]/g, "_")}_${g.count >= 1000 ? (g.count / 1000).toFixed(1) + 'k' : g.count}_${ts}`;
-        
-        const rows: (string | number)[][] = [["HEAD", "iVAS Premium rate SMS My Numbers", "*", "*", "*", "*"], ["0", "Range", "Number", "A2P", "P2P"]];
-        let idx = 1;
-        g.nums.forEach(n => rows.push([idx++, `${n.code} ${country}`, n.num, "$0.00", ""]));
-        
+
+        const rows: (string | number)[][] = [
+            ["", "", ""], // Row 1
+            ["", "", ""], // Row 2
+            ["", "Country Name", "Numbers"] // Row 3
+        ];
+
+        g.nums.forEach(n => rows.push(["", `${n.country} ${n.code}`.toUpperCase(), n.num]));
+
         if (exportFormat === 'xlsx') {
             const ws = XLSX.utils.aoa_to_sheet(rows);
             const wb = XLSX.utils.book_new();
