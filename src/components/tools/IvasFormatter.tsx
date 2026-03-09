@@ -141,6 +141,39 @@ export default function IvasFormatter() {
         });
     }
 
+    function exportSpecial() {
+        if (processedData.length === 0) return;
+
+        const total = processedData.length;
+        const maxPerFile = 1000;
+        const numFiles = Math.ceil(total / maxPerFile);
+        const chunkSize = Math.ceil(total / numFiles);
+
+        for (let i = 0; i < numFiles; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, total);
+            const chunk = processedData.slice(start, end);
+
+            const rows: (string | number)[][] = [
+                ["", "", ""], // Row 1
+                ["", "", ""], // Row 2
+                ["", "Country Name", "Numbers"] // Row 3
+            ];
+
+            chunk.forEach(n => rows.push(["", `${n.country} ${n.code}`.toUpperCase(), n.num]));
+
+            // Fixed filename sheet.xlsx
+            const fn = "sheet";
+
+            setTimeout(() => {
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+                XLSX.writeFile(wb, fn + '.xlsx');
+            }, i * 500); // 500ms delay to avoid browser blocking multiple downloads
+        }
+    }
+
     function downloadSingleCountry(country: string) {
         const g = groupedData[country];
         if (!g || !g.nums.length) return;
@@ -307,6 +340,29 @@ export default function IvasFormatter() {
                             <button onClick={exportData} className="btn-primary text-xs flex items-center gap-2"><Download size={12} /> Download ({selectedCountries.size})</button>
                             <button onClick={copyAllSelected} className="btn-secondary text-xs flex items-center gap-2"><Copy size={12} /> Copy All</button>
                             <button onClick={resetTool} className="btn-secondary text-xs flex items-center gap-2 text-red-400"><Trash2 size={12} /> Reset</button>
+                        </div>
+                    </div>
+
+                    {/* Special Export Segment */}
+                    <div className="glass-panel p-6 border-brand/20 bg-brand-dim/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-2">
+                            <span className="text-[10px] font-bold text-brand/40 uppercase tracking-widest">Special Segment</span>
+                        </div>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <h3 className="text-sm font-bold text-brand uppercase tracking-wider flex items-center gap-2">
+                                    <Terminal size={14} /> Batch Splitting Export
+                                </h3>
+                                <p className="text-[11px] text-text-dim max-w-sm">
+                                    Export all {processedData.length} numbers split into balanced batches (max 1000 each) as <code className="text-brand/70 font-bold">sheet.xlsx</code>.
+                                </p>
+                            </div>
+                            <button
+                                onClick={exportSpecial}
+                                className="btn-primary bg-brand hover:bg-brand-hover text-white px-8 py-3 shadow-lg shadow-brand/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-3 whitespace-nowrap"
+                            >
+                                <UploadCloud size={16} /> Run Special Export
+                            </button>
                         </div>
                     </div>
 
